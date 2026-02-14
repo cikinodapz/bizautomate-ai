@@ -1,0 +1,127 @@
+import { NextResponse } from 'next/server';
+import { GoogleGenAI } from '@google/genai';
+import prisma from '@/lib/db';
+
+export const dynamic = 'force-dynamic';
+
+export async function POST(req: Request) {
+    try {
+        const { image } = await req.json();
+
+        if (!image) {
+            return NextResponse.json({ error: 'No image provided' }, { status: 400 });
+        }
+
+        const apiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY || process.env.GEMINI_API_KEY;
+        if (!apiKey) {
+            return NextResponse.json({ error: 'Gemini API key not configured' }, { status: 500 });
+        }
+
+        const ai = new GoogleGenAI({ apiKey });
+
+        // Remove data URL prefix if present
+        const base64Data = image.replace(/^data:image\/\w+;base64,/, '');
+
+        const response = await ai.models.generateContent({
+            model: 'gemini-2.5-flash-lite',
+            contents: [
+                {
+                    role: 'user',
+                    parts: [
+                        {
+                            inlineData: {
+                                mimeType: 'image/jpeg',
+                                data: base64Data,
+                            },
+                        },
+                        {
+                            text: `Analisis gambar struk/nota/receipt ini dan extract semua informasi.
+              
+Return sebagai JSON dengan format EXACT berikut (tanpa markdown code blocks):
+{
+  "storeName": "nama toko",
+  "date": "YYYY-MM-DD",
+  "items": [
+    { "name": "nama barang", "qty": 1, "price": 10000 }
+  ],
+  "total": 50000
+}
+
+ATURAN:
+1. Jika tidak bisa membaca field tertentu, gunakan null.
+2. Price dan total dalam angka (tanpa Rp dan titik).
+3. qty adalah jumlah item, default 1 jika tidak terlihat.
+4. Pastikan total adalah jumlah dari semua (qty * price).
+5. HANYA return JSON, tanpa teks tambahan.`,
+                        },
+                    ],
+                },
+            ],
+        });
+
+        const text = response?.text || '';
+
+        // Try to parse JSON from response
+        let parsed;
+        try {
+            const jsonMatch = text.match(/\{[\s\S]*\}/);
+            parsed = JSON.parse(jsonMatch ? jsonMatch[0] : text);
+        } catch {
+            return NextResponse.json({
+                error: 'Failed to parse receipt',
+                raw: text
+            }, { status: 422 });
+        }
+
+        return NextResponse.json({
+            success: true,
+            data: parsed,
+            raw: text,
+        });
+    } catch (error) {
+        console.error('Scanner error:', error);
+        return NextResponse.json({ error: String(error) }, { status: 500 });
+    }
+}
+
+// Save scanned receipt + create transaction
+export async function PUT(req: Request) {
+    try {
+        const { storeName, date, items, total } = await req.json();
+        const businessId = 'biz-001';
+
+        // Save scanned receipt record
+        const receipt = await prisma.scannedReceipt.create({
+            data: {
+                businessId,
+                storeName,
+                date: date ? new Date(date) : new Date(),
+                total,
+                itemsJson: JSON.stringify(items),
+            },
+        });
+
+        // Also create a transaction so it shows in dashboard/analytics
+        const txItems = (items || []).map((item: { name: string; qty: number; price: number }) => ({
+            productName: item.name,
+            quantity: item.qty || 1,
+            price: item.price || 0,
+            subtotal: (item.qty || 1) * (item.price || 0),
+        }));
+
+        const transaction = await prisma.transaction.create({
+            data: {
+                businessId,
+                date: new Date(), // Always use current date so it shows in dashboard
+                customerName: storeName || 'Struk Scan',
+                total: total || txItems.reduce((s: number, i: { subtotal: number }) => s + i.subtotal, 0),
+                items: { create: txItems },
+            },
+        });
+
+        return NextResponse.json({ success: true, receipt, transaction });
+    } catch (error) {
+        console.error('Save receipt error:', error);
+        return NextResponse.json({ error: String(error) }, { status: 500 });
+    }
+}
