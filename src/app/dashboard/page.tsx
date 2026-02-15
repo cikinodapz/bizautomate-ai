@@ -13,6 +13,11 @@ import {
     FileText,
     ArrowUpRight,
     ArrowDownRight,
+    Sparkles,
+    RefreshCw,
+    CheckCircle2,
+    AlertTriangle,
+    Info,
 } from "lucide-react";
 import {
     AreaChart,
@@ -45,6 +50,12 @@ interface DashboardData {
     }[];
 }
 
+interface AIInsight {
+    type: "success" | "warning" | "info";
+    title: string;
+    message: string;
+}
+
 function formatRupiah(num: number) {
     return new Intl.NumberFormat("id-ID", {
         style: "currency",
@@ -61,6 +72,21 @@ function formatTime(dateStr: string) {
 export default function DashboardPage() {
     const [data, setData] = useState<DashboardData | null>(null);
     const [loading, setLoading] = useState(true);
+    const [insights, setInsights] = useState<AIInsight[]>([]);
+    const [insightsLoading, setInsightsLoading] = useState(true);
+
+    const loadInsights = async () => {
+        setInsightsLoading(true);
+        try {
+            const res = await fetch("/api/analytics/insights");
+            const d = await res.json();
+            setInsights(d.insights || []);
+        } catch {
+            setInsights([{ type: "info", title: "Gagal Memuat", message: "Tidak dapat memuat AI insights." }]);
+        } finally {
+            setInsightsLoading(false);
+        }
+    };
 
     useEffect(() => {
         fetch("/api/analytics")
@@ -70,6 +96,7 @@ export default function DashboardPage() {
                 setLoading(false);
             })
             .catch(() => setLoading(false));
+        loadInsights();
     }, []);
 
     if (loading) {
@@ -158,44 +185,86 @@ export default function DashboardPage() {
 
             {/* Dashboard Grid */}
             <div className="dashboard-grid">
-                {/* Sales Chart */}
-                <div className="card">
-                    <div className="card-header">
-                        <h2>Tren Penjualan (7 Hari)</h2>
-                        <Link href="/dashboard/analytics" className="card-action">
-                            Lihat Detail →
-                        </Link>
+                {/* Left Column */}
+                <div style={{ display: "flex", flexDirection: "column", gap: 24 }}>
+                    {/* Sales Chart */}
+                    <div className="card">
+                        <div className="card-header">
+                            <h2>Tren Penjualan (7 Hari)</h2>
+                            <Link href="/dashboard/analytics" className="card-action">
+                                Lihat Detail →
+                            </Link>
+                        </div>
+                        <div className="chart-wrapper">
+                            <ResponsiveContainer width="100%" height="100%">
+                                <AreaChart data={dailyRevenue}>
+                                    <defs>
+                                        <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
+                                            <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
+                                            <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                                        </linearGradient>
+                                    </defs>
+                                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+                                    <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
+                                    <YAxis stroke="#6b7280" fontSize={12} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
+                                    <Tooltip
+                                        contentStyle={{
+                                            background: "#1a1a2e",
+                                            border: "1px solid rgba(255,255,255,0.1)",
+                                            borderRadius: 12,
+                                            color: "#f1f1f7",
+                                        }}
+                                        formatter={(value) => [formatRupiah(Number(value)), "Revenue"]}
+                                    />
+                                    <Area
+                                        type="monotone"
+                                        dataKey="revenue"
+                                        stroke="#6366f1"
+                                        strokeWidth={2}
+                                        fill="url(#colorRevenue)"
+                                    />
+                                </AreaChart>
+                            </ResponsiveContainer>
+                        </div>
                     </div>
-                    <div className="chart-wrapper">
-                        <ResponsiveContainer width="100%" height="100%">
-                            <AreaChart data={dailyRevenue}>
-                                <defs>
-                                    <linearGradient id="colorRevenue" x1="0" y1="0" x2="0" y2="1">
-                                        <stop offset="5%" stopColor="#6366f1" stopOpacity={0.3} />
-                                        <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                                    </linearGradient>
-                                </defs>
-                                <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-                                <XAxis dataKey="date" stroke="#6b7280" fontSize={12} />
-                                <YAxis stroke="#6b7280" fontSize={12} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-                                <Tooltip
-                                    contentStyle={{
-                                        background: "#1a1a2e",
-                                        border: "1px solid rgba(255,255,255,0.1)",
-                                        borderRadius: 12,
-                                        color: "#f1f1f7",
-                                    }}
-                                    formatter={(value) => [formatRupiah(Number(value)), "Revenue"]}
-                                />
-                                <Area
-                                    type="monotone"
-                                    dataKey="revenue"
-                                    stroke="#6366f1"
-                                    strokeWidth={2}
-                                    fill="url(#colorRevenue)"
-                                />
-                            </AreaChart>
-                        </ResponsiveContainer>
+
+                    {/* AI Quick Insights */}
+                    <div className="card ai-insights-card">
+                        <div className="card-header">
+                            <h2><Sparkles size={18} style={{ display: "inline", marginRight: 8, color: "var(--accent-primary)" }} />AI Quick Insights</h2>
+                            <button
+                                className="card-action"
+                                onClick={loadInsights}
+                                disabled={insightsLoading}
+                                style={{ cursor: "pointer", background: "none", border: "none", color: "var(--accent-primary)" }}
+                            >
+                                <RefreshCw size={14} className={insightsLoading ? "spin" : ""} style={{ marginRight: 4 }} />
+                                Refresh
+                            </button>
+                        </div>
+                        <div className="ai-insights-list">
+                            {insightsLoading ? (
+                                <>
+                                    <div className="ai-insight-skeleton" />
+                                    <div className="ai-insight-skeleton" />
+                                    <div className="ai-insight-skeleton" />
+                                </>
+                            ) : (
+                                insights.map((insight, i) => (
+                                    <div key={i} className={`ai-insight-item ${insight.type}`}>
+                                        <div className={`ai-insight-icon ${insight.type}`}>
+                                            {insight.type === "success" && <CheckCircle2 size={18} />}
+                                            {insight.type === "warning" && <AlertTriangle size={18} />}
+                                            {insight.type === "info" && <Info size={18} />}
+                                        </div>
+                                        <div className="ai-insight-content">
+                                            <div className="ai-insight-title">{insight.title}</div>
+                                            <div className="ai-insight-message">{insight.message}</div>
+                                        </div>
+                                    </div>
+                                ))
+                            )}
+                        </div>
                     </div>
                 </div>
 

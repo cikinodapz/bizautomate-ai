@@ -6,8 +6,35 @@ export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 export async function POST(req: Request) {
-    const { messages } = await req.json();
+    const { messages, sessionId } = await req.json();
     const businessId = 'biz-001';
+
+    // Auto-create session if not provided
+    let activeSessionId = sessionId;
+    if (!activeSessionId) {
+        const firstUserMsg = messages.find((m: { role: string }) => m.role === 'user');
+        const title = firstUserMsg
+            ? firstUserMsg.content.substring(0, 60) + (firstUserMsg.content.length > 60 ? '...' : '')
+            : 'Percakapan Baru';
+
+        const session = await prisma.chatSession.create({
+            data: { businessId, title },
+        });
+        activeSessionId = session.id;
+    }
+
+    // Save the latest user message to DB
+    const lastUserMsg = messages[messages.length - 1];
+    if (lastUserMsg && lastUserMsg.role === 'user') {
+        await prisma.chatMessage.create({
+            data: {
+                businessId,
+                sessionId: activeSessionId,
+                role: 'user',
+                content: lastUserMsg.content,
+            },
+        });
+    }
 
     // Fetch business context data
     const [business, products, recentTx, receipts] = await Promise.all([
@@ -96,7 +123,35 @@ ATURAN:
         model: google('gemini-2.5-flash-lite'),
         system: systemPrompt,
         messages,
+        async onFinish({ text }) {
+            // Save AI response to DB after streaming completes
+            await prisma.chatMessage.create({
+                data: {
+                    businessId,
+                    sessionId: activeSessionId,
+                    role: 'assistant',
+                    content: text,
+                },
+            });
+
+            // Update session title if it's the first message
+            const msgCount = await prisma.chatMessage.count({
+                where: { sessionId: activeSessionId },
+            });
+            if (msgCount <= 2 && lastUserMsg) {
+                const title = lastUserMsg.content.substring(0, 60) +
+                    (lastUserMsg.content.length > 60 ? '...' : '');
+                await prisma.chatSession.update({
+                    where: { id: activeSessionId },
+                    data: { title },
+                });
+            }
+        },
     });
 
-    return result.toDataStreamResponse();
+    return result.toDataStreamResponse({
+        headers: {
+            'X-Session-Id': activeSessionId,
+        },
+    });
 }
