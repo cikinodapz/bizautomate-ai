@@ -87,8 +87,10 @@ ATURAN:
 // Save scanned receipt + create transaction
 export async function PUT(req: Request) {
     try {
-        const { storeName, date, items, total } = await req.json();
+        const { storeName, date, items, total, image } = await req.json();
         const businessId = 'biz-001';
+
+        console.log(`[Scanner] Saving receipt for ${storeName}, total: ${total}, hasImage: ${!!image}`);
 
         // Save scanned receipt record
         const receipt = await prisma.scannedReceipt.create({
@@ -98,8 +100,11 @@ export async function PUT(req: Request) {
                 date: date ? new Date(date) : new Date(),
                 total,
                 itemsJson: JSON.stringify(items),
+                imageUrl: image
             },
         });
+
+        console.log(`[Scanner] Created ScannedReceipt ID: ${receipt.id}`);
 
         // Also create a transaction so it shows in dashboard/analytics
         const txItems = (items || []).map((item: { name: string; qty: number; price: number }) => ({
@@ -112,16 +117,49 @@ export async function PUT(req: Request) {
         const transaction = await prisma.transaction.create({
             data: {
                 businessId,
-                date: new Date(), // Always use current date so it shows in dashboard
+                date: new Date(),
                 customerName: storeName || 'Struk Scan',
                 total: total || txItems.reduce((s: number, i: { subtotal: number }) => s + i.subtotal, 0),
+                imageUrl: image,
                 items: { create: txItems },
             },
         });
 
+        console.log(`[Scanner] Created Transaction ID: ${transaction.id}`);
+
         return NextResponse.json({ success: true, receipt, transaction });
     } catch (error) {
         console.error('Save receipt error:', error);
+        return NextResponse.json({ error: String(error) }, { status: 500 });
+    }
+}
+
+// GET /api/scanner — Fetch scan history
+export async function GET() {
+    try {
+        const businessId = 'biz-001';
+        const history = await prisma.scannedReceipt.findMany({
+            where: { businessId },
+            orderBy: { createdAt: 'desc' },
+            take: 20,
+        });
+
+        console.log(`[Scanner] Fetched ${history.length} history items for ${businessId}`);
+
+        return NextResponse.json({
+            success: true,
+            history: history.map(h => ({
+                id: h.id,
+                storeName: h.storeName,
+                date: h.date,
+                total: h.total,
+                imageUrl: h.imageUrl,
+                items: JSON.parse(h.itemsJson || '[]'),
+                createdAt: h.createdAt
+            }))
+        });
+    } catch (error) {
+        console.error('Scanner history error:', error);
         return NextResponse.json({ error: String(error) }, { status: 500 });
     }
 }

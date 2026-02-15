@@ -48,7 +48,14 @@ export default function AnalyticsPage() {
     const [data, setData] = useState<AnalyticsData | null>(null);
     const [period, setPeriod] = useState("30");
     const [loading, setLoading] = useState(true);
-    const [insights, setInsights] = useState<string[]>([]);
+    interface Insight {
+        type: 'success' | 'warning' | 'info';
+        title: string;
+        message: string;
+    }
+
+    const [insights, setInsights] = useState<Insight[]>([]);
+    const [insightsLoading, setInsightsLoading] = useState(true);
 
     useEffect(() => {
         setLoading(true);
@@ -57,45 +64,22 @@ export default function AnalyticsPage() {
             .then((d) => {
                 setData(d);
                 setLoading(false);
-                generateInsights(d);
             })
             .catch(() => setLoading(false));
     }, [period]);
 
-    const generateInsights = (d: AnalyticsData) => {
-        const ins: string[] = [];
-        if (d.topProducts.length > 0) {
-            ins.push(
-                `📈 Produk terlaris: ${d.topProducts[0].name} dengan ${d.topProducts[0].count} unit terjual (${formatRupiah(d.topProducts[0].revenue)}).`
-            );
-        }
-        if (d.totalOrders > 0) {
-            ins.push(
-                `💰 Rata-rata nilai transaksi: ${formatRupiah(d.avgOrderValue)} dari total ${d.totalOrders} pesanan.`
-            );
-        }
-        if (d.salesTrend.length > 7) {
-            const lastWeek = d.salesTrend.slice(-7).reduce((s, d) => s + d.revenue, 0);
-            const prevWeek = d.salesTrend.slice(-14, -7).reduce((s, d) => s + d.revenue, 0);
-            if (prevWeek > 0) {
-                const change = ((lastWeek - prevWeek) / prevWeek) * 100;
-                ins.push(
-                    change >= 0
-                        ? `📊 Penjualan minggu ini naik ${change.toFixed(1)}% dibanding minggu lalu.`
-                        : `⚠️ Penjualan minggu ini turun ${Math.abs(change).toFixed(1)}% dibanding minggu lalu.`
-                );
-            }
-        }
-        if (d.categoryBreakdown.length > 0) {
-            const top = d.categoryBreakdown.sort((a, b) => b.value - a.value)[0];
-            const total = d.categoryBreakdown.reduce((s, c) => s + c.value, 0);
-            const pct = ((top.value / total) * 100).toFixed(0);
-            ins.push(
-                `🏷️ Kategori ${top.name} mendominasi ${pct}% dari total penjualan.`
-            );
-        }
-        setInsights(ins);
-    };
+    useEffect(() => {
+        setInsightsLoading(true);
+        fetch('/api/analytics/insights')
+            .then((res) => res.json())
+            .then((data) => {
+                if (data.insights) {
+                    setInsights(data.insights);
+                }
+            })
+            .catch((err) => console.error("Failed to fetch insights:", err))
+            .finally(() => setInsightsLoading(false));
+    }, []);
 
     if (loading) {
         return (
@@ -223,6 +207,7 @@ export default function AnalyticsPage() {
                                     outerRadius={100}
                                     paddingAngle={5}
                                     dataKey="value"
+                                    nameKey="name"
                                 >
                                     {data.categoryBreakdown.map((_, i) => (
                                         <Cell key={i} fill={COLORS[i % COLORS.length]} />
@@ -230,7 +215,8 @@ export default function AnalyticsPage() {
                                 </Pie>
                                 <Tooltip
                                     contentStyle={{ background: "#1a1a2e", border: "1px solid rgba(255,255,255,0.1)", borderRadius: 12, color: "#f1f1f7" }}
-                                    formatter={(value) => [formatRupiah(Number(value)), "Revenue"]}
+                                    itemStyle={{ color: '#f1f1f7' }}
+                                    formatter={(value, name) => [formatRupiah(Number(value)), name]}
                                 />
                                 <Legend
                                     wrapperStyle={{ color: "#9ca3af", fontSize: 12 }}
@@ -245,20 +231,39 @@ export default function AnalyticsPage() {
                     <div className="card-header">
                         <h2>💡 AI Insights</h2>
                     </div>
-                    {insights.map((insight, i) => (
-                        <div key={i} className="insight-item">
-                            <div className={`insight-icon ${insight.includes("⚠️") ? "down" : insight.includes("📈") ? "up" : "info"}`}>
-                                {insight.includes("⚠️") ? (
-                                    <AlertTriangle size={16} />
-                                ) : insight.includes("📈") ? (
-                                    <BarChart size={16} />
-                                ) : (
-                                    <Lightbulb size={16} />
-                                )}
-                            </div>
-                            <div className="insight-text">{insight}</div>
+                    {insightsLoading ? (
+                        <div className="ai-insights-list">
+                            {[1, 2, 3].map((i) => (
+                                <div key={i} className="ai-insight-skeleton" />
+                            ))}
                         </div>
-                    ))}
+                    ) : (
+                        <div className="ai-insights-list">
+                            {insights.length > 0 ? (
+                                insights.map((insight, i) => (
+                                    <div key={i} className="ai-insight-item">
+                                        <div className={`ai-insight-icon ${insight.type}`}>
+                                            {insight.type === 'warning' ? (
+                                                <AlertTriangle size={18} />
+                                            ) : insight.type === 'success' ? (
+                                                <TrendingUp size={18} />
+                                            ) : (
+                                                <Lightbulb size={18} />
+                                            )}
+                                        </div>
+                                        <div className="ai-insight-content">
+                                            <div className="ai-insight-title">{insight.title}</div>
+                                            <div className="ai-insight-message">{insight.message}</div>
+                                        </div>
+                                    </div>
+                                ))
+                            ) : (
+                                <div className="empty-state" style={{ padding: '20px' }}>
+                                    <p style={{ fontSize: '0.9rem' }}>Belum ada insight tersedia.</p>
+                                </div>
+                            )}
+                        </div>
+                    )}
                 </div>
             </div>
         </>

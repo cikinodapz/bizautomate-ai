@@ -40,6 +40,7 @@ model Transaction {
   date         DateTime
   customerName String?
   total        Float
+  imageUrl     String?
   createdAt    DateTime @default(now())
 
   business Business          @relation(fields: [businessId], references: [id])

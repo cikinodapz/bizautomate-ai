@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { Plus, Trash2, Edit2, X, Save, Search, Filter } from "lucide-react";
+import { Plus, Trash2, Edit2, X, Save, Search, Filter, ChevronLeft, ChevronRight, ChevronsLeft, ChevronsRight, ChevronDown } from "lucide-react";
 
 interface Product {
     id: string;
@@ -136,6 +136,7 @@ export default function ProductsPage() {
                                     required
                                     placeholder="Contoh: Coffee Latte"
                                     autoFocus
+                                    style={{ width: "100%" }}
                                 />
                             </div>
 
@@ -145,6 +146,7 @@ export default function ProductsPage() {
                                     className="chat-input"
                                     value={form.category}
                                     onChange={(e) => setForm({ ...form, category: e.target.value })}
+                                    style={{ width: "100%" }}
                                 >
                                     <option value="Minuman">Minuman</option>
                                     <option value="Makanan">Makanan</option>
@@ -161,6 +163,7 @@ export default function ProductsPage() {
                                         onChange={(e) => setForm({ ...form, price: e.target.value })}
                                         required
                                         placeholder="0"
+                                        style={{ width: "100%" }}
                                     />
                                 </div>
                                 <div className="form-group">
@@ -172,6 +175,7 @@ export default function ProductsPage() {
                                         onChange={(e) => setForm({ ...form, stock: e.target.value })}
                                         required
                                         placeholder="0"
+                                        style={{ width: "100%" }}
                                     />
                                 </div>
                             </div>
@@ -225,17 +229,30 @@ export default function ProductsPage() {
                             onChange={(e) => setSearchQuery(e.target.value)}
                         />
                     </div>
-                    <div className="filter-group">
-                        <Filter size={18} style={{ color: "var(--text-muted)" }} />
-                        <select
-                            className="filter-select"
-                            value={categoryFilter}
-                            onChange={(e) => setCategoryFilter(e.target.value)}
-                        >
-                            <option value="Semua">Semua Kategori</option>
-                            <option value="Makanan">Makanan</option>
-                            <option value="Minuman">Minuman</option>
-                        </select>
+                    <div className="filter-wrapper" style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                        <div style={{ position: 'relative' }}>
+                            <Filter size={16} style={{ position: 'absolute', left: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1, pointerEvents: 'none' }} />
+                            <ChevronDown size={14} style={{ position: 'absolute', right: 12, top: '50%', transform: 'translateY(-50%)', color: 'var(--text-muted)', zIndex: 1, pointerEvents: 'none' }} />
+                            <select
+                                className="search-input"
+                                value={categoryFilter}
+                                onChange={(e) => setCategoryFilter(e.target.value)}
+                                style={{
+                                    paddingLeft: 36,
+                                    paddingRight: 36,
+                                    appearance: 'none',
+                                    cursor: 'pointer',
+                                    minWidth: '180px',
+                                    background: 'var(--bg-secondary)',
+                                    color: 'var(--text-primary)',
+                                    border: '1px solid var(--border-primary)',
+                                }}
+                            >
+                                <option value="Semua" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>Semua Kategori</option>
+                                <option value="Makanan" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>Makanan</option>
+                                <option value="Minuman" style={{ background: 'var(--bg-secondary)', color: 'var(--text-primary)' }}>Minuman</option>
+                            </select>
+                        </div>
                     </div>
                 </div>
 
@@ -301,31 +318,71 @@ export default function ProductsPage() {
                         <div className="pagination-info">
                             Menampilkan {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredProducts.length)} dari {filteredProducts.length} produk
                         </div>
-                        <button
-                            className="pagination-btn"
-                            disabled={currentPage === 1}
-                            onClick={() => setCurrentPage(prev => prev - 1)}
-                        >
-                            Sebelumnya
-                        </button>
-
-                        {[...Array(totalPages)].map((_, i) => (
+                        <div className="pagination-controls" style={{ display: 'flex', gap: 8 }}>
                             <button
-                                key={i + 1}
-                                className={`pagination-btn ${currentPage === i + 1 ? 'active' : ''}`}
-                                onClick={() => setCurrentPage(i + 1)}
+                                className="pagination-btn icon-btn"
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(1)}
+                                title="Halaman Pertama"
                             >
-                                {i + 1}
+                                <ChevronsLeft size={16} />
                             </button>
-                        ))}
+                            <button
+                                className="pagination-btn icon-btn"
+                                disabled={currentPage === 1}
+                                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                                title="Sebelumnya"
+                            >
+                                <ChevronLeft size={16} />
+                            </button>
 
-                        <button
-                            className="pagination-btn"
-                            disabled={currentPage === totalPages}
-                            onClick={() => setCurrentPage(prev => prev + 1)}
-                        >
-                            Berikutnya
-                        </button>
+                            <div style={{ display: 'flex', gap: 4 }}>
+                                {(() => {
+                                    // Logic to show a window of pages (e.g., max 5 pages)
+                                    let startPage = Math.max(1, currentPage - 2);
+                                    let endPage = Math.min(totalPages, startPage + 4);
+
+                                    // Adjust start if end is too close to limit
+                                    if (endPage - startPage < 4) {
+                                        startPage = Math.max(1, endPage - 4);
+                                    }
+
+                                    // Ensure startPage is valid
+                                    startPage = Math.max(1, Math.min(startPage, Math.max(1, totalPages - 4)));
+
+                                    return Array.from({ length: Math.min(5, totalPages) }, (_, i) => {
+                                        const p = startPage + i;
+                                        if (p > totalPages) return null;
+                                        return (
+                                            <button
+                                                key={p}
+                                                className={`pagination-btn ${currentPage === p ? "active" : ""}`}
+                                                onClick={() => setCurrentPage(p)}
+                                            >
+                                                {p}
+                                            </button>
+                                        );
+                                    });
+                                })()}
+                            </div>
+
+                            <button
+                                className="pagination-btn icon-btn"
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                                title="Berikutnya"
+                            >
+                                <ChevronRight size={16} />
+                            </button>
+                            <button
+                                className="pagination-btn icon-btn"
+                                disabled={currentPage === totalPages}
+                                onClick={() => setCurrentPage(totalPages)}
+                                title="Halaman Terakhir"
+                            >
+                                <ChevronsRight size={16} />
+                            </button>
+                        </div>
                     </div>
                 )}
             </div>

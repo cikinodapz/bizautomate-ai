@@ -32,6 +32,7 @@ const navItems = [
         label: "MANAGEMENT",
         items: [
             { href: "/dashboard/products", icon: Package, label: "Produk" },
+            { href: "/dashboard/transactions", icon: FileText, label: "Transaksi" },
             { href: "/dashboard/settings", icon: Settings, label: "Settings" },
         ],
     },
