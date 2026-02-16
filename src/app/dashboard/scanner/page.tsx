@@ -15,8 +15,10 @@ import {
     Zap,
     Image as ImageIcon,
     Plus,
-    LayoutDashboard
+    LayoutDashboard,
+    ExternalLink
 } from "lucide-react";
+import Link from "next/link";
 
 interface ExtractedItem {
     name: string;
@@ -226,9 +228,7 @@ export default function ScannerPage() {
                                 >
                                     <div className="upload-options">
                                         <button className="upload-option" onClick={() => fileInputRef.current?.click()}>
-                                            <div className="upload-icon-box blue">
-                                                <Upload size={24} />
-                                            </div>
+                                            <Upload size={32} style={{ color: '#818cf8' }} />
                                             <div className="upload-text">
                                                 <h4>Upload Gambar</h4>
                                                 <p>Drag & drop atau klik telusuri</p>
@@ -240,9 +240,7 @@ export default function ScannerPage() {
                                         </div>
 
                                         <button className="upload-option" onClick={startCamera}>
-                                            <div className="upload-icon-box purple">
-                                                <Camera size={24} />
-                                            </div>
+                                            <Camera size={32} style={{ color: '#c084fc' }} />
                                             <div className="upload-text">
                                                 <h4>Ambil Foto</h4>
                                                 <p>Gunakan kamera perangkat</p>
@@ -318,16 +316,31 @@ export default function ScannerPage() {
                             {/* Tip Card */}
                             {!image && !cameraActive && (
                                 <div style={{
-                                    padding: 20,
-                                    background: 'rgba(99,102,241,0.03)',
-                                    border: '1px solid rgba(99,102,241,0.1)',
+                                    padding: 24,
                                     borderRadius: 16,
-                                    fontSize: '0.85rem',
-                                    color: 'var(--text-secondary)',
-                                    lineHeight: 1.6
+                                    background: 'var(--bg-card)',
+                                    border: '1px solid var(--border-primary)',
+                                    boxShadow: '0 4px 6px -1px rgba(0, 0, 0, 0.1)'
                                 }}>
-                                    <h5 style={{ color: 'var(--accent-primary)', marginBottom: 8, fontWeight: 600 }}>💡 Tips untuk hasil terbaik:</h5>
-                                    <ul style={{ paddingLeft: 16 }}>
+                                    <h5 style={{
+                                        color: 'var(--text-primary)',
+                                        marginBottom: 12,
+                                        fontWeight: 600,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        gap: 8
+                                    }}>
+                                        <Zap size={16} style={{ color: 'var(--accent-primary)' }} />
+                                        Tips Hasil Terbaik
+                                    </h5>
+                                    <ul style={{
+                                        paddingLeft: 20,
+                                        color: 'var(--text-secondary)',
+                                        fontSize: '0.9rem',
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        gap: 8
+                                    }}>
                                         <li>Pastikan struk rata dan tidak terlipat.</li>
                                         <li>Ambil foto di ruangan dengan pencahayaan cukup.</li>
                                         <li>Posisikan kamera tepat di atas struk.</li>
@@ -424,8 +437,11 @@ export default function ScannerPage() {
 
                 {/* Right Column: History */}
                 <aside className="scanner-sidebar">
-                    <div className="sidebar-header">
+                    <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                         <h3><History size={18} style={{ color: 'var(--accent-primary)' }} /> Riwayat Scan</h3>
+                        <Link href="/dashboard/transactions" className="btn-icon-sm" title="Lihat Semua Transaksi">
+                            <ExternalLink size={16} style={{ color: '#ffffff' }} />
+                        </Link>
                     </div>
                     <div className="history-list">
                         {historyLoading && history.length === 0 ? (

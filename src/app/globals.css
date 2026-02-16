@@ -2538,7 +2538,7 @@ body {
 }
 
 .upload-zone {
-  background: rgba(255, 255, 255, 0.02);
+  background: var(--bg-card);
   border: 2px dashed var(--border-primary);
   border-radius: var(--radius-lg);
   padding: 40px;
@@ -2565,7 +2565,7 @@ body {
   align-items: center;
   gap: 16px;
   padding: 20px;
-  background: var(--bg-card);
+  background: rgba(255, 255, 255, 0.02);
   border: 1px solid var(--border-primary);
   border-radius: 16px;
   color: var(--text-primary);
@@ -2576,7 +2576,7 @@ body {
 }
 
 .upload-option:hover {
-  background: rgba(99, 102, 241, 0.05);
+  background: rgba(255, 255, 255, 0.05);
   border-color: var(--accent-primary);
   transform: translateY(-2px);
   box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.2);
