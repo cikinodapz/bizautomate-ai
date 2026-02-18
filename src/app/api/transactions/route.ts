@@ -79,3 +79,62 @@ export async function GET(req: Request) {
         );
     }
 }
+
+export async function POST(req: Request) {
+    try {
+        const { customerName, paymentMethod, items } = await req.json();
+        const businessId = 'biz-001';
+
+        if (!items || items.length === 0) {
+            return NextResponse.json(
+                { success: false, error: 'Minimal 1 item diperlukan' },
+                { status: 400 }
+            );
+        }
+
+        // Calculate total from items
+        const txItems = items.map((item: { productId?: string; productName: string; quantity: number; price: number }) => ({
+            productId: item.productId || null,
+            productName: item.productName,
+            quantity: item.quantity,
+            price: item.price,
+            subtotal: item.quantity * item.price,
+        }));
+        const total = txItems.reduce((sum: number, i: { subtotal: number }) => sum + i.subtotal, 0);
+
+        // Create transaction and decrement stock in a single Prisma transaction
+        const result = await prisma.$transaction(async (tx) => {
+            // Create the transaction with items
+            const transaction = await tx.transaction.create({
+                data: {
+                    businessId,
+                    date: new Date(),
+                    customerName: customerName || 'Umum',
+                    total,
+                    items: { create: txItems },
+                },
+                include: { items: true },
+            });
+
+            // Decrement stock for products that have a productId
+            for (const item of txItems) {
+                if (item.productId) {
+                    await tx.product.update({
+                        where: { id: item.productId },
+                        data: { stock: { decrement: item.quantity } },
+                    });
+                }
+            }
+
+            return transaction;
+        });
+
+        return NextResponse.json({ success: true, data: result });
+    } catch (error) {
+        console.error('Error creating transaction:', error);
+        return NextResponse.json(
+            { success: false, error: 'Failed to create transaction' },
+            { status: 500 }
+        );
+    }
+}

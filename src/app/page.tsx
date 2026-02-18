@@ -1,7 +1,7 @@
 import Link from "next/link";
 import {
   Bot,
-  Camera,
+  ScanLine,
   BarChart3,
   FileText,
   ArrowRight,
@@ -39,12 +39,12 @@ export default function HomePage() {
             Powered by Google Gemini AI
           </div>
           <h1 className="hero-title animate-in delay-200">
-            Automate Your Business with{" "}
-            <span className="gradient-text">AI Power</span>
+            Otomasi Bisnis Anda dengan{" "}
+            <span className="gradient-text">Kekuatan AI</span>
           </h1>
           <p className="hero-subtitle animate-in delay-300">
-            Dari foto struk sampai analisis bisnis — semua dalam satu platform.
-            Asisten bisnis AI yang memahami bahasa Indonesia dan data Anda.
+            Kelola produk, catat transaksi, scan struk otomatis, hingga generate
+            laporan bisnis — semua ditenagai AI dalam satu platform.
           </p>
           <div className="hero-buttons animate-in delay-300">
             <Link href="/dashboard" className="btn-primary">
@@ -125,16 +125,16 @@ export default function HomePage() {
         <div className="features-grid">
           <div className="feature-card animate-in delay-100">
             <div className="feature-icon chat"><Bot size={28} /></div>
-            <h3>AI Business Chatbot</h3>
+            <h3>AI Chat Bisnis</h3>
             <p>
               Tanya apa saja soal bisnis Anda dalam bahasa natural. AI menjawab
-              berdasarkan data nyata — revenue, produk terlaris, tren penjualan,
+              berdasarkan data nyata — pendapatan, produk terlaris, tren penjualan,
               hingga rekomendasi strategi.
             </p>
           </div>
           <div className="feature-card animate-in delay-200">
-            <div className="feature-icon scan"><Camera size={28} /></div>
-            <h3>AI Receipt Scanner</h3>
+            <div className="feature-icon scan"><ScanLine size={28} /></div>
+            <h3>Scan Struk AI</h3>
             <p>
               Foto struk atau nota → AI langsung extract semua data secara otomatis
               menggunakan Gemini Vision. Tanpa ketik manual, data langsung masuk ke
@@ -143,7 +143,7 @@ export default function HomePage() {
           </div>
           <div className="feature-card animate-in delay-300">
             <div className="feature-icon analytics"><BarChart3 size={28} /></div>
-            <h3>AI Analytics Dashboard</h3>
+            <h3>Analitik AI</h3>
             <p>
               Visualisasi data bisnis dengan chart interaktif. AI menganalisis tren,
               mendeteksi anomali, dan memberikan prediksi penjualan secara otomatis
@@ -152,10 +152,10 @@ export default function HomePage() {
           </div>
           <div className="feature-card animate-in delay-300">
             <div className="feature-icon docs"><FileText size={28} /></div>
-            <h3>AI Document Generator</h3>
+            <h3>Generator Dokumen AI</h3>
             <p>
               Generate invoice, laporan penjualan, dan ringkasan bisnis secara
-              otomatis. Cukup satu klik, dokumen profesional siap download dalam format PDF.
+              otomatis. Cukup satu klik, dokumen profesional siap download dalam format DOCX.
             </p>
           </div>
         </div>
@@ -175,10 +175,10 @@ export default function HomePage() {
                 <div className="how-step-number">1</div>
                 <div className="how-step-icon"><Zap size={20} /></div>
               </div>
-              <h3>Input Data</h3>
+              <h3>Masukkan Data</h3>
               <p>
-                Tambahkan produk & transaksi manual, atau cukup foto struk
-                dengan AI Scanner kami yang canggih.
+                Tambahkan produk & catat transaksi, atau cukup foto struk
+                dengan Scan Struk AI kami yang canggih.
               </p>
             </div>
             <div className="how-step animate-in delay-200 alternate">
@@ -186,7 +186,7 @@ export default function HomePage() {
                 <div className="how-step-number">2</div>
                 <div className="how-step-icon"><Bot size={20} /></div>
               </div>
-              <h3>AI Analisis</h3>
+              <h3>AI Menganalisis</h3>
               <p>
                 AI otomatis menganalisis data Anda 24/7 — menemukan tren, insight, prediksi, dan
                 memberikan rekomendasi strategi bisnis.
@@ -197,7 +197,7 @@ export default function HomePage() {
                 <div className="how-step-number">3</div>
                 <div className="how-step-icon"><TrendingUp size={20} /></div>
               </div>
-              <h3>Take Action</h3>
+              <h3>Ambil Keputusan</h3>
               <p>
                 Generate laporan instan, ambil keputusan berbasis data, dan tingkatkan
                 profitabilitas bisnis Anda dengan percaya diri.
@@ -224,9 +224,45 @@ export default function HomePage() {
 
       {/* Footer */}
       <footer className="landing-footer">
-        <p>
-          © 2026 BizAutomate AI · Powered by Google Gemini · Built for PARAS ICT XI
-        </p>
+        <div className="footer-content">
+          <div className="footer-grid">
+            {/* Brand */}
+            <div className="footer-brand">
+              <div className="footer-logo">
+                <span className="logo-icon">⚡</span> BizAutomate AI
+              </div>
+              <p>
+                Platform otomasi bisnis berbasis AI untuk UMKM Indonesia.
+                Ditenagai oleh Google Gemini untuk pengalaman yang cerdas dan efisien.
+              </p>
+            </div>
+
+            {/* Quick Links */}
+            <div className="footer-links-group">
+              <h4>Navigasi</h4>
+              <ul>
+                <li><a href="#features">Fitur</a></li>
+                <li><a href="#how">Cara Kerja</a></li>
+                <li><Link href="/dashboard">Dashboard</Link></li>
+              </ul>
+            </div>
+
+            {/* Tech */}
+            <div className="footer-links-group">
+              <h4>Teknologi</h4>
+              <ul>
+                <li><span>Google Gemini AI</span></li>
+                <li><span>Next.js & React</span></li>
+                <li><span>Prisma & PostgreSQL</span></li>
+              </ul>
+            </div>
+          </div>
+
+          <div className="footer-bottom">
+            <p>© 2026 BizAutomate AI</p>
+            <p>Powered by <span className="gradient-text-sm">Google Gemini</span></p>
+          </div>
+        </div>
       </footer>
     </div>
   );

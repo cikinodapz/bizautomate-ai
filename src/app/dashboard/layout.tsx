@@ -10,30 +10,37 @@ import {
     FileText,
     Package,
     Settings,
+    Receipt,
+    ScanLine,
 } from "lucide-react";
 
 const navItems = [
     {
-        label: "OVERVIEW",
+        label: "UTAMA",
         items: [
             { href: "/dashboard", icon: LayoutDashboard, label: "Dashboard" },
         ],
     },
     {
-        label: "AI TOOLS",
+        label: "BISNIS",
         items: [
-            { href: "/dashboard/chat", icon: Bot, label: "AI Chat", badge: "AI" },
-            { href: "/dashboard/scanner", icon: Camera, label: "Receipt Scanner", badge: "Vision" },
-            { href: "/dashboard/analytics", icon: BarChart3, label: "Analytics" },
-            { href: "/dashboard/documents", icon: FileText, label: "Documents" },
+            { href: "/dashboard/products", icon: Package, label: "Produk" },
+            { href: "/dashboard/transactions", icon: Receipt, label: "Transaksi" },
+            { href: "/dashboard/scanner", icon: ScanLine, label: "Scan Struk", badge: "AI" },
         ],
     },
     {
-        label: "MANAGEMENT",
+        label: "LAPORAN & AI",
         items: [
-            { href: "/dashboard/products", icon: Package, label: "Produk" },
-            { href: "/dashboard/transactions", icon: FileText, label: "Transaksi" },
-            { href: "/dashboard/settings", icon: Settings, label: "Settings" },
+            { href: "/dashboard/analytics", icon: BarChart3, label: "Analitik" },
+            { href: "/dashboard/documents", icon: FileText, label: "Dokumen", badge: "AI" },
+            { href: "/dashboard/chat", icon: Bot, label: "AI Chat", badge: "AI" },
+        ],
+    },
+    {
+        label: "LAINNYA",
+        items: [
+            { href: "/dashboard/settings", icon: Settings, label: "Pengaturan" },
         ],
     },
 ];

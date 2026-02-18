@@ -200,7 +200,7 @@ export default function ScannerPage() {
         <div className="animate-fade-in">
             <div className="page-header" style={{ marginBottom: 32 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: 8 }}>
-                    <h1>📸 AI Receipt Scanner</h1>
+                    <h1>🧾 Scan Struk AI</h1>
                     <span className="badge-ai"><Zap size={12} /> Gemini Vision</span>
                 </div>
                 <p>
@@ -437,11 +437,8 @@ export default function ScannerPage() {
 
                 {/* Right Column: History */}
                 <aside className="scanner-sidebar">
-                    <div className="sidebar-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                    <div className="sidebar-header">
                         <h3><History size={18} style={{ color: 'var(--accent-primary)' }} /> Riwayat Scan</h3>
-                        <Link href="/dashboard/transactions" className="btn-icon-sm" title="Lihat Semua Transaksi">
-                            <ExternalLink size={16} style={{ color: '#ffffff' }} />
-                        </Link>
                     </div>
                     <div className="history-list">
                         {historyLoading && history.length === 0 ? (

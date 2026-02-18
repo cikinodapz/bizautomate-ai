@@ -19,7 +19,10 @@ import {
     CheckCircle,
     ChevronsLeft,
     ChevronsRight,
-    ChevronDown
+    ChevronDown,
+    Plus,
+    Trash2,
+    ShoppingCart
 } from "lucide-react";
 
 interface TransactionItem {
@@ -48,6 +51,22 @@ interface Meta {
     totalPages: number;
 }
 
+interface Product {
+    id: string;
+    name: string;
+    price: number;
+    stock: number;
+    category: string;
+}
+
+interface CartItem {
+    productId: string;
+    productName: string;
+    price: number;
+    quantity: number;
+    maxStock: number;
+}
+
 function formatRupiah(num: number) {
     return new Intl.NumberFormat("id-ID", {
         style: "currency",
@@ -74,6 +93,16 @@ export default function TransactionsPage() {
     const [page, setPage] = useState(1);
     const [meta, setMeta] = useState<Meta | null>(null);
     const [selectedTransaction, setSelectedTransaction] = useState<Transaction | null>(null);
+
+    // Add transaction modal state
+    const [showAddModal, setShowAddModal] = useState(false);
+    const [products, setProducts] = useState<Product[]>([]);
+    const [cart, setCart] = useState<CartItem[]>([]);
+    const [customerName, setCustomerName] = useState("");
+    const [paymentMethod, setPaymentMethod] = useState("cash");
+    const [submitting, setSubmitting] = useState(false);
+    const [addError, setAddError] = useState<string | null>(null);
+    const [addSuccess, setAddSuccess] = useState(false);
 
     const fetchTransactions = async () => {
         setLoading(true);
@@ -104,13 +133,98 @@ export default function TransactionsPage() {
         return () => clearTimeout(timer);
     }, [page, search, sort]);
 
+    // Fetch products when add modal opens
+    useEffect(() => {
+        if (showAddModal) {
+            fetch("/api/products")
+                .then(r => r.json())
+                .then(data => setProducts(data.products || []))
+                .catch(() => { });
+        }
+    }, [showAddModal]);
+
+    const addToCart = (product: Product) => {
+        const existing = cart.find(c => c.productId === product.id);
+        if (existing) {
+            if (existing.quantity < product.stock) {
+                setCart(cart.map(c => c.productId === product.id ? { ...c, quantity: c.quantity + 1 } : c));
+            }
+        } else {
+            setCart([...cart, {
+                productId: product.id,
+                productName: product.name,
+                price: product.price,
+                quantity: 1,
+                maxStock: product.stock,
+            }]);
+        }
+    };
+
+    const updateCartQty = (productId: string, qty: number) => {
+        if (qty <= 0) {
+            setCart(cart.filter(c => c.productId !== productId));
+        } else {
+            setCart(cart.map(c => c.productId === productId ? { ...c, quantity: Math.min(qty, c.maxStock) } : c));
+        }
+    };
+
+    const removeFromCart = (productId: string) => {
+        setCart(cart.filter(c => c.productId !== productId));
+    };
+
+    const cartTotal = cart.reduce((sum, c) => sum + c.price * c.quantity, 0);
+
+    const submitTransaction = async () => {
+        if (cart.length === 0) return;
+        setSubmitting(true);
+        setAddError(null);
+        try {
+            const res = await fetch("/api/transactions", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    customerName: customerName || "Umum",
+                    paymentMethod,
+                    items: cart.map(c => ({
+                        productId: c.productId,
+                        productName: c.productName,
+                        quantity: c.quantity,
+                        price: c.price,
+                    })),
+                }),
+            });
+            const data = await res.json();
+            if (!data.success) throw new Error(data.error || "Gagal membuat transaksi");
+            setAddSuccess(true);
+            setTimeout(() => {
+                setShowAddModal(false);
+                setCart([]);
+                setCustomerName("");
+                setPaymentMethod("cash");
+                setAddSuccess(false);
+                fetchTransactions();
+            }, 1200);
+        } catch (err) {
+            setAddError(err instanceof Error ? err.message : "Gagal membuat transaksi");
+        } finally {
+            setSubmitting(false);
+        }
+    };
+
     return (
         <div className="page-container">
-            <div className="page-header">
+            <div className="page-header" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start' }}>
                 <div>
                     <h1>🗃️ Riwayat Transaksi</h1>
                     <p>Pantau semua transaksi masuk dan detail penjualannya.</p>
                 </div>
+                <button
+                    className="btn-primary"
+                    style={{ display: 'flex', alignItems: 'center', gap: 8, whiteSpace: 'nowrap' }}
+                    onClick={() => { setShowAddModal(true); setAddError(null); setAddSuccess(false); }}
+                >
+                    <Plus size={18} /> Tambah Transaksi
+                </button>
             </div>
 
             <div className="card">
@@ -464,46 +578,7 @@ export default function TransactionsPage() {
                                 </div>
                             </div>
 
-                            {/* Receipt Image */}
-                            <div>
-                                <h3 style={{ fontSize: '1rem', fontWeight: 600, marginBottom: 16, display: 'flex', alignItems: 'center', gap: 8 }}>
-                                    <Camera size={18} /> Bukti Fisik / Struk
-                                </h3>
-                                {selectedTransaction.imageUrl ? (
-                                    <div style={{
-                                        borderRadius: '12px',
-                                        overflow: 'hidden',
-                                        border: '1px solid var(--border-primary)',
-                                        background: '#000',
-                                        display: 'flex',
-                                        justifyContent: 'center',
-                                        padding: '20px'
-                                    }}>
-                                        <img
-                                            src={selectedTransaction.imageUrl}
-                                            alt="Bukti Struk"
-                                            style={{
-                                                maxWidth: '100%',
-                                                maxHeight: '400px',
-                                                objectFit: 'contain',
-                                                borderRadius: '4px'
-                                            }}
-                                        />
-                                    </div>
-                                ) : (
-                                    <div style={{
-                                        padding: '40px',
-                                        textAlign: 'center',
-                                        background: 'var(--bg-secondary)',
-                                        borderRadius: '12px',
-                                        border: '1px dashed var(--border-primary)',
-                                        color: 'var(--text-muted)'
-                                    }}>
-                                        <Camera size={48} style={{ opacity: 0.2, marginBottom: 12 }} />
-                                        <p>Tidak ada bukti foto untuk transaksi ini.</p>
-                                    </div>
-                                )}
-                            </div>
+
                         </div>
 
                         {/* Footer */}
@@ -515,6 +590,233 @@ export default function TransactionsPage() {
                                 Tutup
                             </button>
                         </div>
+                    </div>
+                </div>
+            )}
+
+            {/* Add Transaction Modal */}
+            {showAddModal && (
+                <div
+                    className="modal-overlay"
+                    onClick={() => { if (!submitting) setShowAddModal(false); }}
+                    style={{
+                        position: 'fixed', top: 0, left: 0, right: 0, bottom: 0,
+                        background: 'rgba(0,0,0,0.7)', backdropFilter: 'blur(4px)',
+                        zIndex: 9999, display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 20
+                    }}
+                >
+                    <div
+                        onClick={(e) => e.stopPropagation()}
+                        style={{
+                            width: '100%', maxWidth: '800px', maxHeight: '90vh', overflowY: 'auto',
+                            background: 'var(--bg-card)', borderRadius: '16px',
+                            border: '1px solid var(--border-primary)',
+                            boxShadow: '0 25px 50px -12px rgba(0,0,0,0.5)', padding: 0
+                        }}
+                    >
+                        {/* Header */}
+                        <div style={{
+                            padding: '20px 24px', borderBottom: '1px solid var(--border-primary)',
+                            display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                            background: 'rgba(255,255,255,0.02)'
+                        }}>
+                            <h2 style={{ fontSize: '1.25rem', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 10 }}>
+                                <ShoppingCart size={24} className="text-accent" /> Tambah Transaksi Baru
+                            </h2>
+                            <button
+                                onClick={() => { if (!submitting) setShowAddModal(false); }}
+                                style={{ background: 'transparent', border: 'none', color: 'var(--text-secondary)', cursor: 'pointer' }}
+                            >
+                                <X size={24} />
+                            </button>
+                        </div>
+
+                        <div style={{ padding: '24px' }}>
+                            {addSuccess ? (
+                                <div style={{ textAlign: 'center', padding: '40px 20px' }}>
+                                    <CheckCircle size={64} style={{ color: '#34d399', marginBottom: 16 }} />
+                                    <h3 style={{ fontSize: '1.2rem', marginBottom: 8 }}>Transaksi Berhasil! 🎉</h3>
+                                    <p style={{ color: 'var(--text-muted)' }}>Data transaksi telah disimpan dan stok produk telah diperbarui.</p>
+                                </div>
+                            ) : (
+                                <>
+                                    {/* Customer & Payment */}
+                                    <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 24 }}>
+                                        <div>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Nama Customer</label>
+                                            <input
+                                                type="text"
+                                                className="search-input"
+                                                placeholder="Kosongkan untuk 'Umum'"
+                                                value={customerName}
+                                                onChange={(e) => setCustomerName(e.target.value)}
+                                                style={{ width: '100%' }}
+                                            />
+                                        </div>
+                                        <div>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 6 }}>Metode Pembayaran</label>
+                                            <select
+                                                className="search-input"
+                                                value={paymentMethod}
+                                                onChange={(e) => setPaymentMethod(e.target.value)}
+                                                style={{ width: '100%', appearance: 'none', cursor: 'pointer', background: 'var(--bg-secondary)', color: 'var(--text-primary)', border: '1px solid var(--border-primary)' }}
+                                            >
+                                                <option value="cash">💵 Cash</option>
+                                                <option value="transfer">🏦 Transfer Bank</option>
+                                                <option value="qris">📱 QRIS</option>
+                                                <option value="debit">💳 Kartu Debit</option>
+                                            </select>
+                                        </div>
+                                    </div>
+
+                                    {/* Product List */}
+                                    <div style={{ marginBottom: 24 }}>
+                                        <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>Pilih Produk</label>
+                                        <div style={{
+                                            display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10,
+                                            maxHeight: '220px', overflowY: 'auto', padding: '4px',
+                                            border: '1px solid var(--border-primary)', borderRadius: 10, background: 'var(--bg-secondary)'
+                                        }}>
+                                            {products.filter(p => p.stock > 0).map(p => {
+                                                const inCart = cart.find(c => c.productId === p.id);
+                                                return (
+                                                    <button
+                                                        key={p.id}
+                                                        onClick={() => addToCart(p)}
+                                                        style={{
+                                                            padding: '10px 12px', borderRadius: 8,
+                                                            border: inCart ? '2px solid var(--accent-primary)' : '1px solid var(--border-primary)',
+                                                            background: inCart ? 'rgba(99,102,241,0.1)' : 'var(--bg-card)',
+                                                            cursor: 'pointer', textAlign: 'left',
+                                                            color: 'var(--text-primary)', transition: 'all 0.15s'
+                                                        }}
+                                                    >
+                                                        <div style={{ fontWeight: 600, fontSize: '0.9rem', marginBottom: 4 }}>{p.name}</div>
+                                                        <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>
+                                                            {formatRupiah(p.price)} · Stok: {p.stock}
+                                                        </div>
+                                                        {inCart && (
+                                                            <div style={{ fontSize: '0.75rem', color: 'var(--accent-primary)', fontWeight: 600, marginTop: 4 }}>
+                                                                ✓ {inCart.quantity}x ditambahkan
+                                                            </div>
+                                                        )}
+                                                    </button>
+                                                );
+                                            })}
+                                            {products.filter(p => p.stock > 0).length === 0 && (
+                                                <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-muted)', gridColumn: '1 / -1' }}>
+                                                    Tidak ada produk dengan stok tersedia.
+                                                </div>
+                                            )}
+                                        </div>
+                                    </div>
+
+                                    {/* Cart */}
+                                    {cart.length > 0 && (
+                                        <div style={{ marginBottom: 24 }}>
+                                            <label style={{ fontSize: '0.85rem', fontWeight: 500, color: 'var(--text-secondary)', display: 'block', marginBottom: 8 }}>
+                                                🛒 Keranjang ({cart.length} item)
+                                            </label>
+                                            <div style={{ border: '1px solid var(--border-primary)', borderRadius: 10, overflow: 'hidden' }}>
+                                                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.9rem' }}>
+                                                    <thead style={{ background: 'var(--bg-secondary)', borderBottom: '1px solid var(--border-primary)' }}>
+                                                        <tr>
+                                                            <th style={{ padding: '10px 14px', textAlign: 'left', fontWeight: 500 }}>Produk</th>
+                                                            <th style={{ padding: '10px 14px', textAlign: 'center', fontWeight: 500, width: 120 }}>Qty</th>
+                                                            <th style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 500 }}>Harga</th>
+                                                            <th style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 500 }}>Subtotal</th>
+                                                            <th style={{ padding: '10px 14px', width: 50 }}></th>
+                                                        </tr>
+                                                    </thead>
+                                                    <tbody>
+                                                        {cart.map(c => (
+                                                            <tr key={c.productId} style={{ borderBottom: '1px solid var(--border-primary)' }}>
+                                                                <td style={{ padding: '10px 14px', fontWeight: 500 }}>{c.productName}</td>
+                                                                <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                                                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 8 }}>
+                                                                        <button
+                                                                            onClick={() => updateCartQty(c.productId, c.quantity - 1)}
+                                                                            style={{
+                                                                                width: 28, height: 28, borderRadius: 6,
+                                                                                border: '1px solid var(--border-primary)',
+                                                                                background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                                                                cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                                fontSize: '1rem', fontWeight: 600
+                                                                            }}
+                                                                        >−</button>
+                                                                        <span style={{ minWidth: 24, textAlign: 'center', fontWeight: 600 }}>{c.quantity}</span>
+                                                                        <button
+                                                                            onClick={() => updateCartQty(c.productId, c.quantity + 1)}
+                                                                            disabled={c.quantity >= c.maxStock}
+                                                                            style={{
+                                                                                width: 28, height: 28, borderRadius: 6,
+                                                                                border: '1px solid var(--border-primary)',
+                                                                                background: 'var(--bg-secondary)', color: 'var(--text-primary)',
+                                                                                cursor: c.quantity >= c.maxStock ? 'not-allowed' : 'pointer',
+                                                                                opacity: c.quantity >= c.maxStock ? 0.4 : 1,
+                                                                                display: 'flex', alignItems: 'center', justifyContent: 'center',
+                                                                                fontSize: '1rem', fontWeight: 600
+                                                                            }}
+                                                                        >+</button>
+                                                                    </div>
+                                                                </td>
+                                                                <td style={{ padding: '10px 14px', textAlign: 'right', color: 'var(--text-muted)' }}>{formatRupiah(c.price)}</td>
+                                                                <td style={{ padding: '10px 14px', textAlign: 'right', fontWeight: 500 }}>{formatRupiah(c.price * c.quantity)}</td>
+                                                                <td style={{ padding: '10px 14px', textAlign: 'center' }}>
+                                                                    <button
+                                                                        onClick={() => removeFromCart(c.productId)}
+                                                                        style={{ background: 'transparent', border: 'none', color: '#ef4444', cursor: 'pointer', padding: 4 }}
+                                                                        title="Hapus"
+                                                                    >
+                                                                        <Trash2 size={16} />
+                                                                    </button>
+                                                                </td>
+                                                            </tr>
+                                                        ))}
+                                                        <tr style={{ background: 'rgba(99,102,241,0.05)' }}>
+                                                            <td colSpan={3} style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700 }}>Grand Total</td>
+                                                            <td style={{ padding: '12px 14px', textAlign: 'right', fontWeight: 700, fontSize: '1.1rem', color: 'var(--accent-primary)' }}>{formatRupiah(cartTotal)}</td>
+                                                            <td></td>
+                                                        </tr>
+                                                    </tbody>
+                                                </table>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {addError && (
+                                        <div style={{ padding: '12px 16px', background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, color: '#ef4444', marginBottom: 16, fontSize: '0.9rem' }}>
+                                            ⚠️ {addError}
+                                        </div>
+                                    )}
+                                </>
+                            )}
+                        </div>
+
+                        {/* Footer */}
+                        {!addSuccess && (
+                            <div style={{ padding: '20px 24px', borderTop: '1px solid var(--border-primary)', display: 'flex', justifyContent: 'space-between', alignItems: 'center', background: 'rgba(255,255,255,0.02)' }}>
+                                <button
+                                    className="btn-secondary"
+                                    onClick={() => setShowAddModal(false)}
+                                    disabled={submitting}
+                                >
+                                    Batal
+                                </button>
+                                <button
+                                    className="btn-primary"
+                                    onClick={submitTransaction}
+                                    disabled={cart.length === 0 || submitting}
+                                    style={{ display: 'flex', alignItems: 'center', gap: 8, opacity: cart.length === 0 ? 0.5 : 1 }}
+                                >
+                                    {submitting ? (
+                                        <><Loader2 size={18} className="spin" /> Menyimpan...</>
+                                    ) : (
+                                        <><CheckCircle size={18} /> Simpan Transaksi ({formatRupiah(cartTotal)})</>
+                                    )}
+                                </button>
+                            </div>
+                        )}
                     </div>
                 </div>
             )}

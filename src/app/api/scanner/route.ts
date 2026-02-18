@@ -84,7 +84,7 @@ ATURAN:
     }
 }
 
-// Save scanned receipt + create transaction
+// Save scanned receipt (expense only)
 export async function PUT(req: Request) {
     try {
         const { storeName, date, items, total, image } = await req.json();
@@ -92,7 +92,7 @@ export async function PUT(req: Request) {
 
         console.log(`[Scanner] Saving receipt for ${storeName}, total: ${total}, hasImage: ${!!image}`);
 
-        // Save scanned receipt record
+        // Save scanned receipt record (pengeluaran)
         const receipt = await prisma.scannedReceipt.create({
             data: {
                 businessId,
@@ -106,28 +106,7 @@ export async function PUT(req: Request) {
 
         console.log(`[Scanner] Created ScannedReceipt ID: ${receipt.id}`);
 
-        // Also create a transaction so it shows in dashboard/analytics
-        const txItems = (items || []).map((item: { name: string; qty: number; price: number }) => ({
-            productName: item.name,
-            quantity: item.qty || 1,
-            price: item.price || 0,
-            subtotal: (item.qty || 1) * (item.price || 0),
-        }));
-
-        const transaction = await prisma.transaction.create({
-            data: {
-                businessId,
-                date: new Date(),
-                customerName: storeName || 'Struk Scan',
-                total: total || txItems.reduce((s: number, i: { subtotal: number }) => s + i.subtotal, 0),
-                imageUrl: image,
-                items: { create: txItems },
-            },
-        });
-
-        console.log(`[Scanner] Created Transaction ID: ${transaction.id}`);
-
-        return NextResponse.json({ success: true, receipt, transaction });
+        return NextResponse.json({ success: true, receipt });
     } catch (error) {
         console.error('Save receipt error:', error);
         return NextResponse.json({ error: String(error) }, { status: 500 });

@@ -6,7 +6,6 @@ import {
     Bot,
     Send,
     User,
-    Sparkles,
     Plus,
     MessageSquare,
     Trash2,
@@ -17,6 +16,8 @@ import {
     Package,
     BarChart3,
     Lightbulb,
+    X,
+    Quote,
 } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 
@@ -26,6 +27,13 @@ interface ChatSession {
     createdAt: string;
     updatedAt: string;
     _count: { messages: number };
+}
+
+interface TooltipState {
+    visible: boolean;
+    x: number;
+    y: number;
+    text: string;
 }
 
 const PROMPT_CATEGORIES = [
@@ -60,31 +68,129 @@ export default function ChatPage() {
     const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
     const [loadingSessions, setLoadingSessions] = useState(true);
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [quotedText, setQuotedText] = useState<string | null>(null);
+    const [tooltip, setTooltip] = useState<TooltipState>({ visible: false, x: 0, y: 0, text: "" });
     const messagesEndRef = useRef<HTMLDivElement>(null);
+    const chatMessagesRef = useRef<HTMLDivElement>(null);
+    const tooltipRef = useRef<HTMLDivElement>(null);
+    const chatInputRef = useRef<HTMLInputElement>(null);
 
     const {
         messages,
         input,
         handleInputChange,
-        handleSubmit,
+        handleSubmit: originalHandleSubmit,
         isLoading,
         append,
         setMessages,
+        setInput,
     } = useChat({
         api: "/api/chat",
         body: { sessionId: activeSessionId },
         onResponse(response) {
-            // Capture the session ID from the response header
             const newSessionId = response.headers.get("X-Session-Id");
             if (newSessionId && !activeSessionId) {
                 setActiveSessionId(newSessionId);
-                loadSessions(); // Refresh sidebar
+                loadSessions();
             }
         },
         onFinish() {
-            loadSessions(); // Refresh sidebar to update title/count
+            loadSessions();
         },
     });
+
+    // Custom submit handler that prepends quoted text
+    const handleSubmit = (e: React.FormEvent) => {
+        e.preventDefault();
+        if (!input.trim() && !quotedText) return;
+
+        if (quotedText) {
+            const fullMessage = `[Mengenai: "${quotedText}"]\n\n${input}`;
+            append({ role: "user", content: fullMessage });
+            setInput("");
+            setQuotedText(null);
+        } else {
+            originalHandleSubmit(e);
+        }
+    };
+
+    // Handle text selection on AI bubbles
+    const handleTextSelection = useCallback(() => {
+        const selection = window.getSelection();
+        if (!selection || selection.isCollapsed || !selection.toString().trim()) {
+            return;
+        }
+
+        const selectedText = selection.toString().trim();
+        if (selectedText.length < 2) return;
+
+        // Make sure selection is within an AI chat bubble
+        const anchorNode = selection.anchorNode;
+        if (!anchorNode) return;
+
+        const bubble = (anchorNode as HTMLElement).closest
+            ? (anchorNode as HTMLElement).closest(".chat-message.assistant .chat-bubble")
+            : (anchorNode.parentElement as HTMLElement)?.closest(".chat-message.assistant .chat-bubble");
+
+        if (!bubble) return;
+
+        const range = selection.getRangeAt(0);
+        const rect = range.getBoundingClientRect();
+
+        // Use viewport coordinates directly (fixed positioning)
+        const x = rect.left + rect.width / 2;
+        const y = rect.top - 10;
+
+        setTooltip({
+            visible: true,
+            x,
+            y,
+            text: selectedText.length > 300 ? selectedText.substring(0, 300) + "..." : selectedText,
+        });
+    }, []);
+
+    // Listen for mouseup on the chat messages container
+    useEffect(() => {
+        const container = chatMessagesRef.current;
+        if (!container) return;
+
+        const handleMouseUp = () => {
+            // Small delay to let the selection finalize
+            setTimeout(handleTextSelection, 10);
+        };
+
+        container.addEventListener("mouseup", handleMouseUp);
+        return () => container.removeEventListener("mouseup", handleMouseUp);
+    }, [handleTextSelection]);
+
+    // Close tooltip on click outside or scroll
+    useEffect(() => {
+        const handleClickOutside = (e: MouseEvent) => {
+            if (tooltipRef.current && !tooltipRef.current.contains(e.target as Node)) {
+                setTooltip((prev) => ({ ...prev, visible: false }));
+            }
+        };
+
+        const handleScroll = () => {
+            setTooltip((prev) => ({ ...prev, visible: false }));
+        };
+
+        document.addEventListener("mousedown", handleClickOutside);
+        chatMessagesRef.current?.addEventListener("scroll", handleScroll);
+
+        return () => {
+            document.removeEventListener("mousedown", handleClickOutside);
+            chatMessagesRef.current?.removeEventListener("scroll", handleScroll);
+        };
+    }, []);
+
+    // When quote is set, focus the input
+    const handleQuote = () => {
+        setQuotedText(tooltip.text);
+        setTooltip((prev) => ({ ...prev, visible: false }));
+        window.getSelection()?.removeAllRanges();
+        setTimeout(() => chatInputRef.current?.focus(), 50);
+    };
 
     // Load sessions on mount
     const loadSessions = useCallback(async () => {
@@ -111,6 +217,7 @@ export default function ChatPage() {
     // Load a session's messages
     const loadSession = async (sessionId: string) => {
         setActiveSessionId(sessionId);
+        setQuotedText(null);
         try {
             const res = await fetch(`/api/chat/history/${sessionId}`);
             const data = await res.json();
@@ -134,6 +241,7 @@ export default function ChatPage() {
     const startNewChat = () => {
         setActiveSessionId(null);
         setMessages([]);
+        setQuotedText(null);
     };
 
     // Delete a session
@@ -244,7 +352,7 @@ export default function ChatPage() {
                             </span>
                         )}
                     </div>
-                    <div className="chat-messages">
+                    <div className="chat-messages" ref={chatMessagesRef}>
                         {messages.length === 0 && (
                             <div className="chat-welcome">
                                 <div className="chat-welcome-header">
@@ -301,19 +409,54 @@ export default function ChatPage() {
                         <div ref={messagesEndRef} />
                     </div>
 
+                    {/* Floating quote tooltip — outside scroll container, fixed to viewport */}
+                    {tooltip.visible && (
+                        <div
+                            ref={tooltipRef}
+                            className="chat-quote-tooltip"
+                            style={{
+                                left: `${tooltip.x}px`,
+                                top: `${tooltip.y}px`,
+                            }}
+                            onClick={handleQuote}
+                        >
+                            <Quote size={14} />
+                            <span>Tanyakan ini</span>
+                        </div>
+                    )}
+
                     <div className="chat-input-area">
+                        {/* Quote preview */}
+                        {quotedText && (
+                            <div className="chat-quote-preview">
+                                <div className="chat-quote-preview-content">
+                                    <Quote size={14} className="chat-quote-preview-icon" />
+                                    <span className="chat-quote-preview-text">
+                                        &ldquo;{quotedText}&rdquo;
+                                    </span>
+                                </div>
+                                <button
+                                    className="chat-quote-clear"
+                                    onClick={() => setQuotedText(null)}
+                                    title="Hapus kutipan"
+                                >
+                                    <X size={14} />
+                                </button>
+                            </div>
+                        )}
                         <form onSubmit={handleSubmit} className="chat-input-wrapper">
                             <input
+                                ref={chatInputRef}
                                 className="chat-input"
                                 value={input}
                                 onChange={handleInputChange}
-                                placeholder="Tanya sesuatu tentang bisnis Anda..."
+                                placeholder={quotedText ? "Tanyakan lebih lanjut tentang bagian ini..." : "Tanya sesuatu tentang bisnis Anda..."}
                                 disabled={isLoading}
                             />
                             <button
                                 type="submit"
                                 className="chat-send-btn"
-                                disabled={isLoading || !input.trim()}
+                                disabled={isLoading || (!input.trim() && !quotedText)}
                             >
                                 <Send size={20} />
                             </button>
