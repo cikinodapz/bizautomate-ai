@@ -256,62 +256,64 @@ export default function ProductsPage() {
                     </div>
                 </div>
 
-                <table className="data-table">
-                    <thead>
-                        <tr>
-                            <th>Produk</th>
-                            <th>Kategori</th>
-                            <th>Harga</th>
-                            <th>Stok</th>
-                            <th style={{ width: 100 }}>Aksi</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {paginatedProducts.length > 0 ? (
-                            paginatedProducts.map((p) => (
-                                <tr key={p.id}>
-                                    <td style={{ fontWeight: 500 }}>{p.name}</td>
-                                    <td>
-                                        <span className={`category-badge ${p.category.toLowerCase()}`}>{p.category}</span>
-                                    </td>
-                                    <td>{formatRupiah(p.price)}</td>
-                                    <td>
-                                        <span style={{ color: p.stock < 30 ? "var(--warning)" : "var(--text-primary)" }}>
-                                            {p.stock}
-                                            {p.stock < 30 && " ⚠️"}
-                                        </span>
-                                    </td>
-                                    <td>
-                                        <div style={{ display: "flex", gap: 8 }}>
-                                            <button
-                                                style={{ background: "none", border: "none", color: "var(--accent-primary-hover)", cursor: "pointer" }}
-                                                onClick={() => {
-                                                    setEditId(p.id);
-                                                    setForm({ name: p.name, category: p.category, price: String(p.price), stock: String(p.stock) });
-                                                    setShowForm(true);
-                                                }}
-                                            >
-                                                <Edit2 size={16} />
-                                            </button>
-                                            <button
-                                                style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}
-                                                onClick={() => setProductToDelete(p)}
-                                            >
-                                                <Trash2 size={16} />
-                                            </button>
-                                        </div>
+                <div className="table-container">
+                    <table className="data-table">
+                        <thead>
+                            <tr>
+                                <th>Produk</th>
+                                <th>Kategori</th>
+                                <th>Harga</th>
+                                <th>Stok</th>
+                                <th style={{ width: 100 }}>Aksi</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {paginatedProducts.length > 0 ? (
+                                paginatedProducts.map((p) => (
+                                    <tr key={p.id}>
+                                        <td style={{ fontWeight: 500 }}>{p.name}</td>
+                                        <td>
+                                            <span className={`category-badge ${p.category.toLowerCase()}`}>{p.category}</span>
+                                        </td>
+                                        <td>{formatRupiah(p.price)}</td>
+                                        <td>
+                                            <span style={{ color: p.stock < 30 ? "var(--warning)" : "var(--text-primary)" }}>
+                                                {p.stock}
+                                                {p.stock < 30 && " ⚠️"}
+                                            </span>
+                                        </td>
+                                        <td>
+                                            <div style={{ display: "flex", gap: 8 }}>
+                                                <button
+                                                    style={{ background: "none", border: "none", color: "var(--accent-primary-hover)", cursor: "pointer" }}
+                                                    onClick={() => {
+                                                        setEditId(p.id);
+                                                        setForm({ name: p.name, category: p.category, price: String(p.price), stock: String(p.stock) });
+                                                        setShowForm(true);
+                                                    }}
+                                                >
+                                                    <Edit2 size={16} />
+                                                </button>
+                                                <button
+                                                    style={{ background: "none", border: "none", color: "var(--danger)", cursor: "pointer" }}
+                                                    onClick={() => setProductToDelete(p)}
+                                                >
+                                                    <Trash2 size={16} />
+                                                </button>
+                                            </div>
+                                        </td>
+                                    </tr>
+                                ))
+                            ) : (
+                                <tr>
+                                    <td colSpan={5} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
+                                        Tidak ada produk yang ditemukan.
                                     </td>
                                 </tr>
-                            ))
-                        ) : (
-                            <tr>
-                                <td colSpan={5} style={{ textAlign: "center", padding: "40px", color: "var(--text-muted)" }}>
-                                    Tidak ada produk yang ditemukan.
-                                </td>
-                            </tr>
-                        )}
-                    </tbody>
-                </table>
+                            )}
+                        </tbody>
+                    </table>
+                </div>
 
                 {totalPages > 1 && (
                     <div className="pagination">

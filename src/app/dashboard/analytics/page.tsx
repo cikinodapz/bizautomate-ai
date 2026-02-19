@@ -118,7 +118,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Summary Cards */}
-            <div className="stat-cards" style={{ gridTemplateColumns: "repeat(3, 1fr)" }}>
+            <div className="stat-cards stat-cards-3">
                 <div className="stat-card">
                     <div className="stat-card-header">
                         <span>Total Revenue</span>

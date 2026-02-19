@@ -2,6 +2,7 @@
 
 import { Save, Loader2, CheckCircle, Store, Info, Sparkles } from "lucide-react";
 import { useState, useEffect } from "react";
+import Image from "next/image";
 
 export default function SettingsPage() {
     const [name, setName] = useState("");
@@ -61,7 +62,7 @@ export default function SettingsPage() {
                 <p>Kelola profil bisnis dan informasi aplikasi Anda.</p>
             </div>
 
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
+            <div className="settings-grid" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 24, alignItems: 'start' }}>
 
                 {/* Business Profile - Left */}
                 <div style={{
@@ -196,13 +197,13 @@ export default function SettingsPage() {
                                 width: 44, height: 44, borderRadius: 12,
                                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                                 background: 'linear-gradient(135deg, var(--accent-primary), #a78bfa)',
-                                fontSize: '1.3rem', flexShrink: 0
+                                flexShrink: 0, overflow: 'hidden'
                             }}>
-                                ⚡
+                                <Image src="/logo.png" alt="VeltrixAI" width={30} height={30} />
                             </div>
                             <div>
                                 <p style={{ fontWeight: 700, color: 'var(--text-primary)', fontSize: '1.05rem', lineHeight: 1.3 }}>
-                                    BizAutomate AI
+                                    VeltrixAI
                                 </p>
                                 <p style={{ fontSize: '0.8rem', color: 'var(--text-muted)' }}>Versi 2.0</p>
                             </div>

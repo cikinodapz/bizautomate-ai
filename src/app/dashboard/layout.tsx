@@ -1,7 +1,9 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { usePathname } from "next/navigation";
+import { useState, useEffect } from "react";
 import {
     LayoutDashboard,
     Bot,
@@ -12,6 +14,8 @@ import {
     Settings,
     Receipt,
     ScanLine,
+    Menu,
+    X,
 } from "lucide-react";
 
 const navItems = [
@@ -51,14 +55,62 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
+    const [sidebarOpen, setSidebarOpen] = useState(false);
+
+    // Close sidebar on route change
+    useEffect(() => {
+        setSidebarOpen(false);
+    }, [pathname]);
+
+    // Close sidebar on escape key
+    useEffect(() => {
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === "Escape") setSidebarOpen(false);
+        };
+        document.addEventListener("keydown", handleEscape);
+        return () => document.removeEventListener("keydown", handleEscape);
+    }, []);
 
     return (
         <div className="dashboard-wrapper">
-            <aside className="sidebar">
-                <Link href="/" className="sidebar-logo">
-                    <span className="logo-icon">⚡</span>
-                    BizAutomate AI
+            {/* Mobile header bar */}
+            <header className="mobile-header">
+                <button
+                    className="mobile-menu-btn"
+                    onClick={() => setSidebarOpen(true)}
+                    aria-label="Open menu"
+                >
+                    <Menu size={24} />
+                </button>
+                <Link href="/" className="mobile-logo">
+                    <Image src="/logo.png" alt="VeltrixAI" width={32} height={32} />
+                    VeltrixAI
                 </Link>
+                <div style={{ width: 40 }} /> {/* spacer for centering */}
+            </header>
+
+            {/* Sidebar overlay for mobile */}
+            {sidebarOpen && (
+                <div
+                    className="sidebar-overlay"
+                    onClick={() => setSidebarOpen(false)}
+                />
+            )}
+
+            <aside className={`sidebar ${sidebarOpen ? "sidebar-open" : ""}`}>
+                <div className="sidebar-top">
+                    <Link href="/" className="sidebar-logo">
+                        <Image src="/logo.png" alt="VeltrixAI" width={50} height={50} className="logo-icon" />
+                        VeltrixAI
+                    </Link>
+                    <button
+                        className="sidebar-close-btn"
+                        onClick={() => setSidebarOpen(false)}
+                        aria-label="Close menu"
+                    >
+                        <X size={22} />
+                    </button>
+                </div>
 
                 <nav className="sidebar-nav">
                     {navItems.map((section) => (

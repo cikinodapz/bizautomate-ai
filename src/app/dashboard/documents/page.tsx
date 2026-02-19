@@ -1,21 +1,32 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
     FileText,
     Receipt,
     BarChart3,
     Loader2,
     CheckCircle2,
-    RefreshCw,
     Settings2,
     ChevronDown,
     FileDown,
+    Clock,
+    Trash2,
+    FolderOpen,
+    X,
+    Download,
+    Filter,
 } from "lucide-react";
 
 type DocType = "invoice" | "sales_report" | "business_summary";
 
-
+interface DocHistoryItem {
+    id: string;
+    type: DocType;
+    filename: string;
+    date: string;
+    label: string;
+}
 
 interface InvoiceOptions {
     customerName: string;
@@ -33,12 +44,49 @@ interface SummaryOptions {
     tone: "formal" | "casual";
 }
 
+const HISTORY_KEY = "bizautomate_doc_history";
+
+function getDocHistory(): DocHistoryItem[] {
+    if (typeof window === "undefined") return [];
+    try {
+        const raw = localStorage.getItem(HISTORY_KEY);
+        return raw ? JSON.parse(raw) : [];
+    } catch {
+        return [];
+    }
+}
+
+function saveDocHistory(items: DocHistoryItem[]) {
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(items));
+}
+
+function formatHistoryDate(dateStr: string) {
+    return new Date(dateStr).toLocaleDateString("id-ID", {
+        day: "numeric",
+        month: "short",
+        year: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+    });
+}
+
+const docTypeInfo: Record<DocType, { icon: typeof Receipt; label: string; color: string }> = {
+    invoice: { icon: Receipt, label: "Invoice", color: "#6366f1" },
+    sales_report: { icon: BarChart3, label: "Laporan", color: "#34d399" },
+    business_summary: { icon: FileText, label: "Ringkasan", color: "#fbbf24" },
+};
+
+type HistoryFilter = "all" | DocType;
+
 export default function DocumentsPage() {
     const [selectedType, setSelectedType] = useState<DocType>("invoice");
     const [generating, setGenerating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [optionsOpen, setOptionsOpen] = useState(true);
-    const [invoiceGenerated, setInvoiceGenerated] = useState<string | null>(null);
+    const [successFile, setSuccessFile] = useState<string | null>(null);
+    const [history, setHistory] = useState<DocHistoryItem[]>([]);
+    const [historyFilter, setHistoryFilter] = useState<HistoryFilter>("all");
+    const [redownloadingId, setRedownloadingId] = useState<string | null>(null);
 
     // Customization states
     const [invoiceOpts, setInvoiceOpts] = useState<InvoiceOptions>({
@@ -54,6 +102,62 @@ export default function DocumentsPage() {
         focus: "all",
         tone: "formal",
     });
+
+    // Load history from localStorage on mount
+    useEffect(() => {
+        setHistory(getDocHistory());
+    }, []);
+
+    const addToHistory = useCallback((type: DocType, filename: string, label: string) => {
+        const newItem: DocHistoryItem = {
+            id: `${Date.now()}-${Math.random().toString(36).slice(2, 8)}`,
+            type,
+            filename,
+            date: new Date().toISOString(),
+            label,
+        };
+        const updated = [newItem, ...getDocHistory()].slice(0, 50); // Keep max 50
+        saveDocHistory(updated);
+        setHistory(updated);
+    }, []);
+
+    const clearHistory = useCallback(() => {
+        saveDocHistory([]);
+        setHistory([]);
+    }, []);
+
+    const removeFromHistory = useCallback((id: string) => {
+        const updated = getDocHistory().filter((item) => item.id !== id);
+        saveDocHistory(updated);
+        setHistory(updated);
+    }, []);
+
+    const redownloadDocument = useCallback(async (item: DocHistoryItem) => {
+        setRedownloadingId(item.id);
+        try {
+            const res = await fetch("/api/documents", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ type: item.type, options: {} }),
+            });
+            if (!res.ok) {
+                const errData = await res.json();
+                throw new Error(errData.error || "Failed to generate");
+            }
+            const blob = await res.blob();
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement("a");
+            a.href = url;
+            a.download = item.filename;
+            a.click();
+            URL.revokeObjectURL(url);
+        } catch (err) {
+            setError(
+                err instanceof Error ? err.message : "Gagal mengunduh ulang dokumen."
+            );
+        }
+        setRedownloadingId(null);
+    }, []);
 
     // Fetch recent transactions for invoice customer dropdown
     const [recentCustomers, setRecentCustomers] = useState<string[]>([]);
@@ -121,7 +225,7 @@ export default function DocumentsPage() {
     const generateDocument = async () => {
         setGenerating(true);
         setError(null);
-        setInvoiceGenerated(null);
+        setSuccessFile(null);
         try {
             const res = await fetch("/api/documents", {
                 method: "POST",
@@ -130,7 +234,6 @@ export default function DocumentsPage() {
             });
 
             if (selectedType === "invoice" || selectedType === "sales_report" || selectedType === "business_summary") {
-                // All document types return binary DOCX
                 if (!res.ok) {
                     const errData = await res.json();
                     throw new Error(errData.error || "Failed to generate");
@@ -147,7 +250,8 @@ export default function DocumentsPage() {
                 a.download = filename;
                 a.click();
                 URL.revokeObjectURL(url);
-                setInvoiceGenerated(filename);
+                setSuccessFile(filename);
+                addToHistory(selectedType, filename, activeDoc?.title || "Document");
             }
         } catch (err) {
             setError(
@@ -158,7 +262,6 @@ export default function DocumentsPage() {
         }
         setGenerating(false);
     };
-
 
     const activeDoc = docTypes.find((d) => d.id === selectedType);
 
@@ -355,6 +458,7 @@ export default function DocumentsPage() {
                 )}
             </div>
 
+            {/* Generate Button */}
             <div className="doc-actions-bar">
                 <button
                     className="btn-primary"
@@ -370,49 +474,150 @@ export default function DocumentsPage() {
                         <><FileDown size={18} /> Generate & Download {activeDoc?.title}</>
                     )}
                 </button>
-
-
             </div>
 
+            {/* Compact Success Banner */}
+            {successFile && (
+                <div className="doc-success-banner">
+                    <div className="doc-success-banner-content">
+                        <CheckCircle2 size={20} />
+                        <div>
+                            <strong>{successFile}</strong> berhasil didownload ✨
+                            <span className="doc-success-hint">Buka di Microsoft Word atau Google Docs untuk melihat.</span>
+                        </div>
+                    </div>
+                    <button
+                        className="doc-success-close"
+                        onClick={() => setSuccessFile(null)}
+                    >
+                        <X size={16} />
+                    </button>
+                </div>
+            )}
+
+            {/* Error Banner */}
             {error && (
                 <div className="error-alert">
                     ⚠️ {error}
                 </div>
             )}
 
-            <div className="doc-preview-container">
-                {generating ? (
-                    <div className="doc-preview-loading">
-                        <div className="doc-loading-animation">
-                            <RefreshCw size={32} className="spin" />
-                        </div>
-                        <h3>Membuat {activeDoc?.title} dari template...</h3>
-                        <p>Mengisi template dengan data bisnis dan analisis AI</p>
-                    </div>
-                ) : invoiceGenerated ? (
-                    <div className="doc-preview-empty">
-                        <div className="doc-empty-icon" style={{ background: "rgba(34, 197, 94, 0.1)", color: "#22c55e" }}>
-                            <CheckCircle2 size={48} />
-                        </div>
-                        <h3>{activeDoc?.title} berhasil digenerate! ✨</h3>
-                        <p style={{ marginBottom: 8 }}>
-                            File <strong>{invoiceGenerated}</strong> telah didownload.
-                        </p>
-                        <p style={{ fontSize: "0.78rem", color: "var(--text-muted)" }}>
-                            Buka file di Microsoft Word atau Google Docs untuk melihat dan mengedit.
-                        </p>
-                    </div>
-                ) : (
-                    <div className="doc-preview-empty">
-                        <div className="doc-empty-icon">
-                            <FileText size={48} />
-                        </div>
-                        <h3>Pilih tipe dokumen dan klik Generate</h3>
-                        <p>
-                            Dokumen akan digenerate dari template DOCX dengan analisis AI dan langsung terdownload.
-                        </p>
+            {/* Document History */}
+            <div className="doc-history-card">
+                <div className="doc-history-header">
+                    <h2>
+                        <FolderOpen size={18} style={{ color: 'var(--accent-primary)' }} />
+                        Riwayat Dokumen
+                    </h2>
+                    {history.length > 0 && (
+                        <button
+                            className="doc-history-clear"
+                            onClick={clearHistory}
+                        >
+                            <Trash2 size={14} />
+                            Hapus Semua
+                        </button>
+                    )}
+                </div>
+
+                {/* Filter Tabs */}
+                {history.length > 0 && (
+                    <div className="doc-history-filters">
+                        <Filter size={14} className="doc-history-filter-icon" />
+                        {([
+                            { key: "all" as HistoryFilter, label: "Semua" },
+                            { key: "invoice" as HistoryFilter, label: "Invoice" },
+                            { key: "sales_report" as HistoryFilter, label: "Laporan" },
+                            { key: "business_summary" as HistoryFilter, label: "Ringkasan" },
+                        ]).map((f) => (
+                            <button
+                                key={f.key}
+                                className={`doc-history-filter-btn ${historyFilter === f.key ? "active" : ""}`}
+                                onClick={() => setHistoryFilter(f.key)}
+                            >
+                                {f.label}
+                                {f.key !== "all" && (
+                                    <span className="doc-history-filter-count">
+                                        {history.filter((h) => h.type === f.key).length}
+                                    </span>
+                                )}
+                            </button>
+                        ))}
                     </div>
                 )}
+
+                {history.length === 0 ? (
+                    <div className="doc-history-empty">
+                        <Clock size={32} />
+                        <h4>Belum ada dokumen</h4>
+                        <p>Dokumen yang sudah digenerate akan muncul di sini.</p>
+                    </div>
+                ) : (() => {
+                    const filtered = historyFilter === "all"
+                        ? history
+                        : history.filter((h) => h.type === historyFilter);
+                    return filtered.length === 0 ? (
+                        <div className="doc-history-empty">
+                            <Filter size={28} />
+                            <h4>Tidak ada dokumen bertipe ini</h4>
+                            <p>Coba pilih filter lain atau generate dokumen baru.</p>
+                        </div>
+                    ) : (
+                        <div className="doc-history-list">
+                            {filtered.map((item) => {
+                                const info = docTypeInfo[item.type];
+                                const IconComp = info.icon;
+                                const isRedownloading = redownloadingId === item.id;
+                                return (
+                                    <div key={item.id} className="doc-history-item">
+                                        <div
+                                            className="doc-history-item-icon"
+                                            style={{ background: `${info.color}15`, color: info.color }}
+                                        >
+                                            <IconComp size={18} />
+                                        </div>
+                                        <div className="doc-history-item-info">
+                                            <div className="doc-history-item-name">{item.filename}</div>
+                                            <div className="doc-history-item-meta">
+                                                <span
+                                                    className="doc-history-type-badge"
+                                                    style={{ background: `${info.color}18`, color: info.color }}
+                                                >
+                                                    {info.label}
+                                                </span>
+                                                <span className="doc-history-item-date">
+                                                    <Clock size={12} />
+                                                    {formatHistoryDate(item.date)}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div className="doc-history-item-actions">
+                                            <button
+                                                className="doc-history-item-download"
+                                                onClick={() => redownloadDocument(item)}
+                                                disabled={isRedownloading}
+                                                title="Download ulang"
+                                            >
+                                                {isRedownloading ? (
+                                                    <Loader2 size={14} className="spin" />
+                                                ) : (
+                                                    <Download size={14} />
+                                                )}
+                                            </button>
+                                            <button
+                                                className="doc-history-item-remove"
+                                                onClick={() => removeFromHistory(item.id)}
+                                                title="Hapus dari riwayat"
+                                            >
+                                                <X size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+                                );
+                            })}
+                        </div>
+                    );
+                })()}
             </div>
         </>
     );

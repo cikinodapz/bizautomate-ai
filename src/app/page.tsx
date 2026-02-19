@@ -1,4 +1,5 @@
 import Link from "next/link";
+import Image from "next/image";
 import {
   Bot,
   ScanLine,
@@ -20,8 +21,8 @@ export default function HomePage() {
       {/* Navigation */}
       <nav className="landing-nav animate-in">
         <Link href="/" className="landing-logo">
-          <span className="logo-icon">⚡</span>
-          BizAutomate AI
+          <Image src="/logo.png" alt="VeltrixAI" width={52} height={52} className="logo-icon" />
+          VeltrixAI
         </Link>
         <ul className="landing-nav-links">
           <li><a href="#features">Fitur</a></li>
@@ -64,7 +65,7 @@ export default function HomePage() {
                 <span className="preview-dot red"></span>
                 <span className="preview-dot yellow"></span>
                 <span className="preview-dot green"></span>
-                <span className="preview-title">BizAutomate AI — Dashboard</span>
+                <span className="preview-title">VeltrixAI — Dashboard</span>
               </div>
               <div className="preview-content">
                 <div className="preview-sidebar">
@@ -217,7 +218,7 @@ export default function HomePage() {
           </p>
           <Link href="/dashboard" className="btn-primary">
             <Zap size={18} />
-            Mulai Sekarang — Gratis 14 Hari
+            Mulai Sekarang
           </Link>
         </div>
       </section>
@@ -229,7 +230,7 @@ export default function HomePage() {
             {/* Brand */}
             <div className="footer-brand">
               <div className="footer-logo">
-                <span className="logo-icon">⚡</span> BizAutomate AI
+                <Image src="/logo.png" alt="VeltrixAI" width={42} height={42} className="logo-icon" /> VeltrixAI
               </div>
               <p>
                 Platform otomasi bisnis berbasis AI untuk UMKM Indonesia.
@@ -259,7 +260,7 @@ export default function HomePage() {
           </div>
 
           <div className="footer-bottom">
-            <p>© 2026 BizAutomate AI</p>
+            <p>© 2026 VeltrixAI</p>
             <p>Powered by <span className="gradient-text-sm">Google Gemini</span></p>
           </div>
         </div>

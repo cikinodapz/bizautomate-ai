@@ -92,7 +92,7 @@ export async function POST(req: Request) {
         return `- ${tx.customerName || 'Walk-in'} | ${new Date(tx.date).toLocaleDateString('id-ID')} ${new Date(tx.date).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })} | Rp${tx.total.toLocaleString('id-ID')} | Items: ${itemsList}`;
     }).join('\n');
 
-    const systemPrompt = `Kamu adalah BizAutomate AI — asisten bisnis AI yang cerdas dan ramah untuk "${business?.name || 'Bisnis'}".
+    const systemPrompt = `Kamu adalah VeltrixAI — asisten bisnis AI yang cerdas dan ramah untuk "${business?.name || 'Bisnis'}".
 Alamat: ${business?.address || '-'}
 
 DATA BISNIS SAAT INI:
