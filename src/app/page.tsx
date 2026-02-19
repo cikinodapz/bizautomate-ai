@@ -19,7 +19,7 @@ export default function HomePage() {
   return (
     <div className="landing-page">
       {/* Navigation */}
-      <nav className="landing-nav animate-in">
+      <nav className="landing-nav">
         <Link href="/" className="landing-logo">
           <Image src="/logo.png" alt="VeltrixAI" width={52} height={52} className="logo-icon" />
           VeltrixAI
