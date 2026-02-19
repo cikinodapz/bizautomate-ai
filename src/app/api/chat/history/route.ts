@@ -1,12 +1,15 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 // GET /api/chat/history — list all chat sessions
 export async function GET() {
     try {
-        const businessId = 'biz-001';
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const businessId = session.businessId;
         const sessions = await prisma.chatSession.findMany({
             where: { businessId },
             orderBy: { updatedAt: 'desc' },
@@ -25,7 +28,9 @@ export async function GET() {
 // POST /api/chat/history — create new chat session
 export async function POST() {
     try {
-        const businessId = 'biz-001';
+        const authSession = await getSession();
+        if (!authSession) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const businessId = authSession.businessId;
         const session = await prisma.chatSession.create({
             data: {
                 businessId,

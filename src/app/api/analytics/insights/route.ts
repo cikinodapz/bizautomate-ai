@@ -2,13 +2,16 @@ import { NextResponse } from 'next/server';
 import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import prisma from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 export const maxDuration = 30;
 
 export async function GET() {
     try {
-        const businessId = 'biz-001';
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const businessId = session.businessId;
         const now = new Date();
         const sevenDaysAgo = new Date(now);
         sevenDaysAgo.setDate(now.getDate() - 7);

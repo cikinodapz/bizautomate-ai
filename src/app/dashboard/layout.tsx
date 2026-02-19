@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import Image from "next/image";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import { useState, useEffect } from "react";
 import {
     LayoutDashboard,
@@ -16,6 +16,7 @@ import {
     ScanLine,
     Menu,
     X,
+    LogOut,
 } from "lucide-react";
 
 const navItems = [
@@ -55,7 +56,9 @@ export default function DashboardLayout({
     children: React.ReactNode;
 }) {
     const pathname = usePathname();
+    const router = useRouter();
     const [sidebarOpen, setSidebarOpen] = useState(false);
+    const [loggingOut, setLoggingOut] = useState(false);
 
     // Close sidebar on route change
     useEffect(() => {
@@ -70,6 +73,16 @@ export default function DashboardLayout({
         document.addEventListener("keydown", handleEscape);
         return () => document.removeEventListener("keydown", handleEscape);
     }, []);
+
+    const handleLogout = async () => {
+        setLoggingOut(true);
+        try {
+            await fetch("/api/auth/logout", { method: "POST" });
+            router.push("/login");
+        } catch {
+            setLoggingOut(false);
+        }
+    };
 
     return (
         <div className="dashboard-wrapper">
@@ -130,9 +143,21 @@ export default function DashboardLayout({
                         </div>
                     ))}
                 </nav>
+
+                <div className="sidebar-bottom">
+                    <button
+                        className="sidebar-logout-btn"
+                        onClick={handleLogout}
+                        disabled={loggingOut}
+                    >
+                        <LogOut size={18} />
+                        {loggingOut ? "Keluar..." : "Keluar"}
+                    </button>
+                </div>
             </aside>
 
             <main className="main-content">{children}</main>
         </div>
     );
 }
+

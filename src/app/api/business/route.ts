@@ -1,14 +1,15 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-const BUSINESS_ID = 'biz-001';
-
 export async function GET() {
     try {
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         const business = await prisma.business.findUnique({
-            where: { id: BUSINESS_ID },
+            where: { id: session.businessId },
         });
         if (!business) {
             return NextResponse.json({ error: 'Business not found' }, { status: 404 });
@@ -22,10 +23,12 @@ export async function GET() {
 
 export async function PUT(req: Request) {
     try {
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
         const { name, address } = await req.json();
 
         const business = await prisma.business.update({
-            where: { id: BUSINESS_ID },
+            where: { id: session.businessId },
             data: {
                 ...(name !== undefined && { name }),
                 ...(address !== undefined && { address }),

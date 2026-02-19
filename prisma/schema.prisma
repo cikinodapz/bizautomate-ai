@@ -19,6 +19,18 @@ model Business {
   receipts     ScannedReceipt[]
   chatMessages ChatMessage[]
   chatSessions ChatSession[]
+  user         User?
+}
+
+model User {
+  id         String   @id @default(cuid())
+  email      String   @unique
+  name       String
+  password   String
+  businessId String   @unique
+  createdAt  DateTime @default(now())
+
+  business Business @relation(fields: [businessId], references: [id])
 }
 
 model Product {

@@ -1,39 +1,52 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { hashPassword } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST() {
     try {
-        // Clean existing data
+        // Clean existing data (order matters due to foreign keys)
         await prisma.chatMessage.deleteMany();
+        await prisma.chatSession.deleteMany();
         await prisma.scannedReceipt.deleteMany();
         await prisma.transactionItem.deleteMany();
         await prisma.transaction.deleteMany();
         await prisma.product.deleteMany();
+        await prisma.user.deleteMany();
         await prisma.business.deleteMany();
 
         // Create business
         const business = await prisma.business.create({
             data: {
-                id: 'biz-001',
                 name: 'Warung Kopi Nusantara',
                 address: 'Jl. Merdeka No. 45, Denpasar, Bali',
             },
         });
 
+        // Create demo user
+        const hashedPassword = await hashPassword('demo123');
+        await prisma.user.create({
+            data: {
+                name: 'Demo User',
+                email: 'demo@veltrixai.com',
+                password: hashedPassword,
+                businessId: business.id,
+            },
+        });
+
         // Create products
         const productsData = [
-            { id: 'prod-001', name: 'Kopi Susu Gula Aren', category: 'Minuman', price: 22000, stock: 150 },
-            { id: 'prod-002', name: 'Es Matcha Latte', category: 'Minuman', price: 28000, stock: 80 },
-            { id: 'prod-003', name: 'Americano', category: 'Minuman', price: 18000, stock: 200 },
-            { id: 'prod-004', name: 'Roti Bakar Coklat', category: 'Makanan', price: 15000, stock: 60 },
-            { id: 'prod-005', name: 'Nasi Goreng Spesial', category: 'Makanan', price: 25000, stock: 45 },
-            { id: 'prod-006', name: 'Croissant Butter', category: 'Makanan', price: 20000, stock: 35 },
-            { id: 'prod-007', name: 'Thai Tea', category: 'Minuman', price: 20000, stock: 100 },
-            { id: 'prod-008', name: 'Sandwich Tuna', category: 'Makanan', price: 30000, stock: 25 },
-            { id: 'prod-009', name: 'Cappuccino', category: 'Minuman', price: 24000, stock: 120 },
-            { id: 'prod-010', name: 'Cheesecake Slice', category: 'Makanan', price: 35000, stock: 20 },
+            { name: 'Kopi Susu Gula Aren', category: 'Minuman', price: 22000, stock: 150 },
+            { name: 'Es Matcha Latte', category: 'Minuman', price: 28000, stock: 80 },
+            { name: 'Americano', category: 'Minuman', price: 18000, stock: 200 },
+            { name: 'Roti Bakar Coklat', category: 'Makanan', price: 15000, stock: 60 },
+            { name: 'Nasi Goreng Spesial', category: 'Makanan', price: 25000, stock: 45 },
+            { name: 'Croissant Butter', category: 'Makanan', price: 20000, stock: 35 },
+            { name: 'Thai Tea', category: 'Minuman', price: 20000, stock: 100 },
+            { name: 'Sandwich Tuna', category: 'Makanan', price: 30000, stock: 25 },
+            { name: 'Cappuccino', category: 'Minuman', price: 24000, stock: 120 },
+            { name: 'Cheesecake Slice', category: 'Makanan', price: 35000, stock: 20 },
         ];
 
         const products = await Promise.all(
@@ -99,7 +112,7 @@ export async function POST() {
 
         return NextResponse.json({
             success: true,
-            message: `Seeded: 1 business, ${products.length} products, ${txCount} transactions`,
+            message: `Seeded: 1 business, 1 demo user (demo@veltrixai.com / demo123), ${products.length} products, ${txCount} transactions`,
         });
     } catch (error) {
         console.error('Seed error:', error);

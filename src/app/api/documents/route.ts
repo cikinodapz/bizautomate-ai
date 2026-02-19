@@ -2,6 +2,7 @@ import { NextResponse } from 'next/server';
 import { google } from '@ai-sdk/google';
 import { generateText } from 'ai';
 import prisma from '@/lib/db';
+import { getSession } from '@/lib/auth';
 import * as fs from 'fs';
 import * as path from 'path';
 import PizZip from 'pizzip';
@@ -314,7 +315,9 @@ Tulis dalam Bahasa Indonesia. Jangan tambahkan formatting lain.`,
 export async function POST(req: Request) {
     try {
         const { type, options = {} } = await req.json() as { type: string; options: DocOptions };
-        const businessId = 'biz-001';
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const businessId = session.businessId;
 
         if (!type || !['invoice', 'sales_report', 'business_summary'].includes(type)) {
             return NextResponse.json({ error: 'Invalid document type' }, { status: 400 });

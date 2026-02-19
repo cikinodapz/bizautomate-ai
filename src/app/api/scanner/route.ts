@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import { GoogleGenAI } from '@google/genai';
 import prisma from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -88,7 +89,9 @@ ATURAN:
 export async function PUT(req: Request) {
     try {
         const { storeName, date, items, total, image } = await req.json();
-        const businessId = 'biz-001';
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const businessId = session.businessId;
 
         console.log(`[Scanner] Saving receipt for ${storeName}, total: ${total}, hasImage: ${!!image}`);
 
@@ -116,7 +119,9 @@ export async function PUT(req: Request) {
 // GET /api/scanner — Fetch scan history
 export async function GET() {
     try {
-        const businessId = 'biz-001';
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const businessId = session.businessId;
         const history = await prisma.scannedReceipt.findMany({
             where: { businessId },
             orderBy: { createdAt: 'desc' },

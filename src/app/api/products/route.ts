@@ -1,22 +1,25 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
-const BUSINESS_ID = 'biz-001';
-
 export async function GET() {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const products = await prisma.product.findMany({
-        where: { businessId: BUSINESS_ID },
+        where: { businessId: session.businessId },
         orderBy: { name: 'asc' },
     });
     return NextResponse.json({ products });
 }
 
 export async function POST(req: Request) {
+    const session = await getSession();
+    if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     const { name, category, price, stock } = await req.json();
     const product = await prisma.product.create({
-        data: { businessId: BUSINESS_ID, name, category, price, stock },
+        data: { businessId: session.businessId, name, category, price, stock },
     });
     return NextResponse.json({ product });
 }

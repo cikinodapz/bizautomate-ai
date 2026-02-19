@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
@@ -9,7 +10,9 @@ export async function GET(req: Request) {
         const page = parseInt(searchParams.get('page') || '1');
         const limit = parseInt(searchParams.get('limit') || '10');
         const search = searchParams.get('search') || '';
-        const businessId = 'biz-001'; // Hardcoded for demo
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const businessId = session.businessId;
 
         const sortParam = searchParams.get('sort') || 'date_desc';
         const [sortBy, sortOrder] = sortParam.includes('_') ? sortParam.split('_') : ['date', 'desc'];
@@ -83,7 +86,9 @@ export async function GET(req: Request) {
 export async function POST(req: Request) {
     try {
         const { customerName, paymentMethod, items } = await req.json();
-        const businessId = 'biz-001';
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const businessId = session.businessId;
 
         if (!items || items.length === 0) {
             return NextResponse.json(

@@ -1,11 +1,14 @@
 import { NextResponse } from 'next/server';
 import prisma from '@/lib/db';
+import { getSession } from '@/lib/auth';
 
 export const dynamic = 'force-dynamic';
 
 export async function GET() {
     try {
-        const businessId = 'biz-001';
+        const session = await getSession();
+        if (!session) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        const businessId = session.businessId;
         const now = new Date();
 
         // Current period (last 7 days)
